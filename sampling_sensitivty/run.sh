@@ -1,7 +1,5 @@
 source ../venv/bin/activate
 
-source ../venv/bin/activate
-
 cat << 'EOF' | xargs -P 6 -I {} bash -c "python generate_data.py {}"
 -s cma_single -f ela -n 100 -r 30
 -s uniform -f ela -n 10 -r 30
