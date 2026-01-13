@@ -1,12 +1,10 @@
 import argparse
-import re
 import os
 from pathlib import Path
 from ripser import Rips
 from tqdm.auto import tqdm
 from persim import PersistenceImager
 import numpy as np
-import pandas as pd
 from pflacco.classical_ela_features import *
 import pickle
 from scipy.spatial.distance import cdist
@@ -52,9 +50,11 @@ def extract_ela_features(data, sampling_method, sample_size):
     TODO: Implement ELA feature extraction logic
     """
     features = {}
-    for function in tqdm(range(1, 25)):
+    for function in tqdm(range(1, 25), position=0):
         for dimension in [2, 3, 5]:
-            for instance in range(1, 101):
+            for instance in tqdm(range(1, 101), position=1, leave=False):
+                print(
+                    f"Processing ELA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension}...")
                 features[(function, instance, dimension)] = {
                     "ela_dist": [],
                     "levelset": [],
@@ -67,6 +67,7 @@ def extract_ela_features(data, sampling_method, sample_size):
                     samples = data[(function, instance, dimension, runs)]
                     X = samples['X'] if sampling_method != "cma" else samples['X'][:sample_size * dimension]
                     Y = samples['Y'] if sampling_method != "cma" else samples['Y'][:sample_size * dimension]
+
                     features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X,Y))
                     features[(function, instance, dimension)]["levelset"].append(calculate_ela_level(X,Y))
                     features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X,Y))
@@ -83,8 +84,6 @@ def extract_tla_features(data, sampling_method, sample_size):
 
     TODO: Implement TLA feature extraction logic
     """
-    print("Extracting TLA features...")
-
     max_range = 1.0
     kernel_size = 0.0002
     max_range = 1.0
@@ -110,9 +109,11 @@ def extract_tla_features(data, sampling_method, sample_size):
 
     features = {}
 
-    for function in tqdm(range(1, 25)):
+    for function in tqdm(range(1, 25), position=0):
         for dimension in [2, 3, 5]:
-            for instance in range(1, 101):
+            for instance in tqdm(range(1, 101), position=1, leave=False):
+                print(
+                    f"Processing TLA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension}...")
                 features[(function, instance, dimension)] = {
                     'volume': {
                         'h0': [],
@@ -226,7 +227,7 @@ def main():
     # TODO fix this
     sampling_method = "cma_single" if args.sampling_method == "cma" else args.sampling_method
     sample_size = args.sample_size
-    runs = 30;
+    runs = 30
 
     os.makedirs(data_dir / "features", exist_ok=True)
     os.makedirs(data_dir / "features" / "pickles", exist_ok=True)
