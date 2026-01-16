@@ -9,11 +9,13 @@ from pflacco.classical_ela_features import *
 import pickle
 from scipy.spatial.distance import cdist
 
+
 def axis_transform(X):
     pca = PCA(n_components=X.shape[1])
     centered_points = pca.fit_transform(X)
     scaled = centered_points / np.abs(centered_points).max(axis=0)
     return scaled
+
 
 def volume_transform(X):
     _, n_dimensions = X.shape
@@ -43,16 +45,24 @@ def get_distance(X_D, Y_D, alpha=0.2):
     return alpha * X_D + (1 - alpha) * Y_D
 
 
-def extract_ela_features(data, sampling_method, sample_size):
+def extract_ela_features(data, sampling_method, sample_size, data_dir):
     """
     Extract ELA (Exploratory Landscape Analysis) features.
-
-    TODO: Implement ELA feature extraction logic
     """
     features = {}
     for function in tqdm(range(1, 25), position=0):
         for dimension in [2, 3, 5]:
             for instance in tqdm(range(1, 101), position=1, leave=False):
+                filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
+
+                if filename.exists():
+                    print(
+                        f"Skipping as ELA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                    with open(filename, "rb") as f:
+                        file_done = pickle.load(f)
+                        features[(function, instance, dimension)] = file_done
+                    continue
+
                 print(
                     f"Processing ELA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension}...")
                 features[(function, instance, dimension)] = {
@@ -61,24 +71,28 @@ def extract_ela_features(data, sampling_method, sample_size):
                     "meta": [],
                     "disp": [],
                     "ic": [],
-                    "nbc":[],
+                    "nbc": [],
                 }
                 for runs in range(0, 30):
                     samples = data[(function, instance, dimension, runs)]
                     X = samples['X'] if sampling_method != "cma" else samples['X'][:sample_size * dimension]
                     Y = samples['Y'] if sampling_method != "cma" else samples['Y'][:sample_size * dimension]
 
-                    features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X,Y))
-                    features[(function, instance, dimension)]["levelset"].append(calculate_ela_level(X,Y))
-                    features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X,Y))
-                    features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X,Y))
-                    features[(function, instance, dimension)]["ic"].append(calculate_information_content(X,Y, seed=100))
-                    features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X,Y))
+                    features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
+                    features[(function, instance, dimension)]["levelset"].append(calculate_ela_level(X, Y))
+                    features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
+                    features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
+                    features[(function, instance, dimension)]["ic"].append(
+                        calculate_information_content(X, Y, seed=100))
+                    features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X, Y))
+
+                with open(filename, 'wb') as f:
+                    pickle.dump(features[(function, instance, dimension)], f)
+
     return features
 
 
-
-def extract_tla_features(data, sampling_method, sample_size):
+def extract_tla_features(data, sampling_method, sample_size, data_dir):
     """
     Extract TLA (Topological Landscape Analysis) features.
 
@@ -112,6 +126,17 @@ def extract_tla_features(data, sampling_method, sample_size):
     for function in tqdm(range(1, 25), position=0):
         for dimension in [2, 3, 5]:
             for instance in tqdm(range(1, 101), position=1, leave=False):
+
+                filename = data_dir / "features" / "pickles" / f"tla_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
+
+                if filename.exists():
+                    print(
+                        f"Skipping as TLA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                    with open(filename, "rb") as f:
+                        file_done = pickle.load(f)
+                        features[(function, instance, dimension)] = file_done
+                    continue
+
                 print(
                     f"Processing TLA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension}...")
                 features[(function, instance, dimension)] = {
@@ -134,7 +159,7 @@ def extract_tla_features(data, sampling_method, sample_size):
                     X_volume = volume_transform(X)
                     X_axis = axis_transform(X)
 
-                    #Normalizing
+                    # Normalizing
                     X_volume_D = cdist(X_volume, X_volume, "euclidean")
                     X_volume_D_norm = X_volume_D / np.abs(X_volume_D).max(axis=0)
                     X_axis_D = cdist(X_axis, X_axis, "euclidean")
@@ -184,6 +209,10 @@ def extract_tla_features(data, sampling_method, sample_size):
                     features[(function, instance, dimension)]['axis']['h0'].append(img0_axis)
                     features[(function, instance, dimension)]['axis']['h1'].append(img1_axis)
                     features[(function, instance, dimension)]['axis']['h2'].append(img2_axis)
+                    
+                with open(filename, 'wb') as f:
+                    pickle.dump(features[(function, instance, dimension)], f)
+
     return features
 
 
@@ -237,7 +266,7 @@ def main():
     with open(data_dir / pickle_file, "rb") as f:
         data = pickle.load(f)
 
-    features = extract_ela_features(data, sampling_method, sample_size) if args.feature_type == "ela" else extract_tla_features(data, sampling_method, sample_size)
+    features = extract_ela_features(data, sampling_method, sample_size, data_dir) if args.feature_type == "ela" else extract_tla_features(data, sampling_method, sample_size, data_dir)
 
     with open(data_dir / "features" / "pickles" / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl",
               'wb') as f:
