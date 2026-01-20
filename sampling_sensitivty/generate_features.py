@@ -50,21 +50,21 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
     Extract ELA (Exploratory Landscape Analysis) features.
     """
     features = {}
-    for function in tqdm(range(1, 25), position=0):
-        for dimension in [2, 3, 5]:
-            for instance in tqdm(range(1, 101), position=1, leave=False):
+    for dimension in [2, 3, 5]:
+        for function in tqdm(range(1, 25), position=0):
+            for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
                 filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
                 if filename.exists():
                     print(
-                        f"Skipping as ELA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                        f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
                     with open(filename, "rb") as f:
                         file_done = pickle.load(f)
                         features[(function, instance, dimension)] = file_done
                     continue
 
                 print(
-                    f"Processing ELA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension}...")
+                    f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
                 features[(function, instance, dimension)] = {
                     "ela_dist": [],
                     "levelset": [],
@@ -122,23 +122,22 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir):
     )
 
     features = {}
-
-    for function in tqdm(range(1, 25), position=0):
-        for dimension in [2, 3, 5]:
-            for instance in tqdm(range(1, 101), position=1, leave=False):
+    for dimension in [2, 3, 5]:
+        for function in tqdm(range(1, 25), position=0):
+            for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
 
                 filename = data_dir / "features" / "pickles" / f"tla_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
                 if filename.exists():
                     print(
-                        f"Skipping as TLA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                        f"Skipping as TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
                     with open(filename, "rb") as f:
                         file_done = pickle.load(f)
                         features[(function, instance, dimension)] = file_done
                     continue
 
                 print(
-                    f"Processing TLA - Sampling {sampling_method} - Function {function} - Instance {instance} - Dimension {dimension}...")
+                    f"Processing TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
                 features[(function, instance, dimension)] = {
                     'volume': {
                         'h0': [],
