@@ -51,8 +51,10 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
     """
     features = {}
     for dimension in [2, 3]:
-        for function in tqdm(range(1, 25), position=0):
-            for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
+        # for function in tqdm(range(1, 25), position=0):
+        for function in range(1, 25):
+            # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
+            for instance in range(1,101):
                 filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
                 if filename.exists():
@@ -123,9 +125,10 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir):
 
     features = {}
     for dimension in [2, 3]:
-        for function in tqdm(range(1, 25), position=0):
-            for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
-
+        # for function in tqdm(range(1, 25), position=0):
+        for function in range(1, 25):
+            # for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
+            for instance in range(1, 101):
                 filename = data_dir / "features" / "pickles" / f"tla_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
                 if filename.exists():
@@ -270,6 +273,8 @@ def main():
     with open(data_dir / "features" / "pickles" / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl",
               'wb') as f:
         pickle.dump(features, f)
+
+    print(f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl done!")
 
 
 if __name__ == "__main__":
