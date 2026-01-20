@@ -50,7 +50,7 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
     Extract ELA (Exploratory Landscape Analysis) features.
     """
     features = {}
-    for dimension in [2, 3, 5]:
+    for dimension in [2, 3]:
         for function in tqdm(range(1, 25), position=0):
             for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
                 filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
@@ -122,7 +122,7 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir):
     )
 
     features = {}
-    for dimension in [2, 3, 5]:
+    for dimension in [2, 3]:
         for function in tqdm(range(1, 25), position=0):
             for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
 
