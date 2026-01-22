@@ -50,7 +50,7 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
     Extract ELA (Exploratory Landscape Analysis) features.
     """
     features = {}
-    for dimension in [2, 3]:
+    for dimension in [2]:
         # for function in tqdm(range(1, 25), position=0):
         for function in range(1, 25):
             # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
@@ -124,7 +124,7 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir):
     )
 
     features = {}
-    for dimension in [2, 3]:
+    for dimension in [2]:
         # for function in tqdm(range(1, 25), position=0):
         for function in range(1, 25):
             # for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
@@ -254,6 +254,10 @@ def main():
 
     # Convert data_dir to Path and resolve relative paths
     data_dir = Path(args.data_dir).resolve()
+    file_name = data_dir / "features" / "pickles" / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl"
+    if file_name.exists():
+        print(f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl already exists. Skipping feature extraction.")
+        return
 
     # TODO fix this
     sampling_method = "cma_single" if args.sampling_method == "cma" else args.sampling_method
@@ -268,6 +272,7 @@ def main():
     with open(data_dir / pickle_file, "rb") as f:
         data = pickle.load(f)
 
+    print(f"Running feature extraction: {args.feature_type} with {args.sampling_method} sampling and sample size {args.sample_size}")
     features = extract_ela_features(data, sampling_method, sample_size, data_dir) if args.feature_type == "ela" else extract_tla_features(data, sampling_method, sample_size, data_dir)
 
     with open(data_dir / "features" / "pickles" / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl",
