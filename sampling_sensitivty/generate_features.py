@@ -60,10 +60,13 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
                 if filename.exists():
                     # print(
                     #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
-                    with open(filename, "rb") as f:
-                        file_done = pickle.load(f)
-                        features[(function, instance, dimension)] = file_done
-                    continue
+                    try:
+                        with open(filename, 'rb') as f:
+                            file_done = pickle.load(f)
+                            features[(function, instance, dimension)] = file_done
+                            continue
+                    except EOFError:
+                        print(f"{filename} is empty or corrupted")
 
                 # print(
                 #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
@@ -81,7 +84,12 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
                     Y = samples['Y'] if sampling_method != "cma" else samples['Y'][:sample_size * dimension]
 
                     features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
-                    features[(function, instance, dimension)]["levelset"].append(calculate_ela_level(X, Y))
+                    try:
+                        levelset_features = calculate_ela_level(X, Y)
+                        features[(function, instance, dimension)]["levelset"].append(levelset_features)
+                    except Exception as e:
+                        print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
+                        features[(function, instance, dimension)]["levelset"].append({})
                     features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
                     features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
                     features[(function, instance, dimension)]["ic"].append(
@@ -134,10 +142,13 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir):
                 if filename.exists():
                     # print(
                     #     f"Skipping as TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
-                    with open(filename, "rb") as f:
-                        file_done = pickle.load(f)
-                        features[(function, instance, dimension)] = file_done
-                    continue
+                    try:
+                        with open(filename, 'rb') as f:
+                            file_done = pickle.load(f)
+                            features[(function, instance, dimension)] = file_done
+                            continue
+                    except EOFError:
+                        print(f"{filename} is empty or corrupted")
 
                 # print(
                 #     f"Processing TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
