@@ -56,17 +56,17 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
             # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
             for instance in range(1,101):
                 filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
-
-                if filename.exists():
-                    # print(
-                    #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
-                    try:
-                        with open(filename, 'rb') as f:
-                            file_done = pickle.load(f)
-                            features[(function, instance, dimension)] = file_done
-                            continue
-                    except EOFError:
-                        print(f"{filename} is empty or corrupted")
+                #
+                # if filename.exists():
+                #     # print(
+                #     #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                #     try:
+                #         with open(filename, 'rb') as f:
+                #             file_done = pickle.load(f)
+                #             features[(function, instance, dimension)] = file_done
+                #             continue
+                #     except EOFError:
+                #         print(f"{filename} is empty or corrupted")
 
                 # print(
                 #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
@@ -85,7 +85,7 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
 
                     features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
                     try:
-                        levelset_features = calculate_ela_level(X, Y)
+                        levelset_features = calculate_ela_level(X, Y, ela_level_resample_iterations=5)
                         features[(function, instance, dimension)]["levelset"].append(levelset_features)
                     except Exception as e:
                         print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
