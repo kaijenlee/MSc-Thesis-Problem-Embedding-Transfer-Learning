@@ -96,8 +96,8 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir):
                         calculate_information_content(X, Y, seed=100))
                     features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X, Y))
 
-                with open(filename, 'wb') as f:
-                    pickle.dump(features[(function, instance, dimension)], f)
+                # with open(filename, 'wb') as f:
+                #     pickle.dump(features[(function, instance, dimension)], f)
 
     return features
 
@@ -223,8 +223,8 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir):
                     features[(function, instance, dimension)]['axis']['h1'].append(img1_axis)
                     features[(function, instance, dimension)]['axis']['h2'].append(img2_axis)
                     
-                with open(filename, 'wb') as f:
-                    pickle.dump(features[(function, instance, dimension)], f)
+                # with open(filename, 'wb') as f:
+                #     pickle.dump(features[(function, instance, dimension)], f)
 
     return features
 
