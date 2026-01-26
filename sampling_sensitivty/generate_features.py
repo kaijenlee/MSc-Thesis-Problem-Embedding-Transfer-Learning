@@ -278,7 +278,7 @@ def main():
     os.makedirs(data_dir / "features", exist_ok=True)
     os.makedirs(data_dir / "features" / "pickles", exist_ok=True)
 
-    pickle_file = f"{sampling_method}_100_{runs}.pkl" if args.sampling_method == "cma" else f"{sampling_method}_{sample_size}_{runs}.pkl"
+    pickle_file = f"{sampling_method}_100_{runs}.pkl" if args.sampling_method == "cma" or args.sampling_method == "cma_random" else f"{sampling_method}_{sample_size}_{runs}.pkl"
 
     with open(data_dir / pickle_file, "rb") as f:
         data = pickle.load(f)
