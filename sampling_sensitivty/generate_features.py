@@ -244,7 +244,7 @@ def main():
         "--sampling-method",
         type=str,
         required=True,
-        choices=["uniform", "lhs", "ilhs", "sobol", "cma"],
+        choices=["uniform", "lhs", "ilhs", "sobol", "cma", "cma_random"],
         help="Sampling method to use: uniform, lhs (Latin Hypercube Sampling), ilhs (Improved Latin Hypercube Sampling), sobol, or cma"
     )
     parser.add_argument(

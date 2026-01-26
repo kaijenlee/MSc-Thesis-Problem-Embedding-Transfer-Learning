@@ -36,7 +36,7 @@ def parse_arguments():
         '-s', '--sampling-method',
         type=str,
         required=True,
-        choices=['cma_single', 'cma_indp', 'uniform', 'lhs', 'ilhs', 'sobol'],
+        choices=['cma_single', 'cma_random', 'uniform', 'lhs', 'ilhs', 'sobol'],
         help='Sampling method to use for data generation',
         metavar='METHOD'
     )
@@ -109,7 +109,6 @@ def generate_random_samples(suite: cocoex.Suite, sample_size, runs):
         Xs = []
         Ys = []
         for run in range(runs):
-
             X = np.random.uniform(
                 LOWER_BOUND,
                 UPPER_BOUND,
@@ -188,7 +187,6 @@ def generate_ilhs_samples(suite, sample_size, runs):
         Ys = []
 
         for run in range(runs):
-
             # Create Latin Hypercube sampler with optimization for better space-filling
             sampler = qmc.LatinHypercube(d=dimension, optimization="random-cd")
 
@@ -256,7 +254,7 @@ def generate_sobol_samples(suite, sample_size, runs):
     return samples
 
 
-def generate_cma_single_samples(suite, sample_size, runs):
+def generate_cma_single_samples(suite, sample_size, runs, random_start_point=False):
     """
     Generate samples using CMA-ES with a single run.
 
@@ -279,7 +277,11 @@ def generate_cma_single_samples(suite, sample_size, runs):
             X_list = []
             Y_list = []
             budget = sample_size * dimension
-            starting_point = dimension * [0]
+            starting_point = np.random.uniform(
+                LOWER_BOUND,
+                UPPER_BOUND,
+                dimension
+            ) if random_start_point else dimension * [0]
 
             # Disable all stopping criteria
             opts = {
@@ -356,6 +358,8 @@ if __name__ == "__main__":
     samples = {}
 
     match args.sampling_method:
+        case 'cma_random':  # random starting point
+            samples = generate_cma_single_samples(suite, args.sample_size, args.runs, random_start_point=True)
         case 'cma_single':
             samples = generate_cma_single_samples(suite, args.sample_size, args.runs)
         case 'uniform':
@@ -372,5 +376,3 @@ if __name__ == "__main__":
     print(f"Generated {len(samples)} problem samples for {args.runs} runs.")
     with open(f'data/samples/pickles/{args.sampling_method}_{args.sample_size}_{args.runs}.pkl', 'wb') as f:
         pickle.dump(samples, f)
-
-
