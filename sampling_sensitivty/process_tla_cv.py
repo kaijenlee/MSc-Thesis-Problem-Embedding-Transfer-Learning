@@ -109,6 +109,7 @@ def main(data_dir):
         "cma_10_tla.pkl",
         "cma_25_tla.pkl",
         "cma_50_tla.pkl",
+        "ilhs_10_tla.pkl",
         "ilhs_25_tla.pkl",
         "ilhs_50_tla.pkl",
         "lhs_10_tla.pkl",
