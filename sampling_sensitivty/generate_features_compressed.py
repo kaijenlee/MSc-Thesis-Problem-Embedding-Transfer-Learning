@@ -59,23 +59,12 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir, h5_data_f
                 feature = {}
                 filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
-                if h5_data_file.exists():
-                    with h5py.File(h5_data_file, 'r') as f:
-                        if f"{function}_{instance}_{dimension}" in f:
-                            print(f"{function}_{instance}_{dimension} already exists. Skipping feature extraction.")
-                            continue
-
                 if filename.exists():
-                    # print(
-                    #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
                     try:
                         with open(filename, 'rb') as f:
-                            file_done = pickle.load(f)
-                            feature= file_done
-                            with h5py.File(h5_data_file, 'a') as f1:
-                                grp = f1.create_group(f"{function}_{instance}_{dimension}")
-                                for key, value in feature.items():
-                                    grp.create_dataset(key, data=value)
+                            pickle.load(f)
+                            print(
+                                f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
                             continue
                     except EOFError:
                         print(f"{filename} is empty or corrupted")
@@ -107,10 +96,8 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir, h5_data_f
                     feature["ic"].append(calculate_information_content(X, Y, seed=100))
                     feature["nbc"].append(calculate_nbc(X, Y))
 
-                with h5py.File(h5_data_file, 'a') as f:
-                    grp = f.create_group(f"{function}_{instance}_{dimension}")
-                    for key, value in feature.items():
-                        grp.create_dataset(key, data=value)
+                with open(filename, 'wb') as f:
+                    pickle.dump(feature, f)
 
                 del feature
                 gc.collect()
