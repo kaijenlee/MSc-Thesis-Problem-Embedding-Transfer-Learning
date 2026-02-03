@@ -8,6 +8,7 @@ import pickle
 from scipy.spatial.distance import cdist
 import h5py
 import gc
+from tqdm.auto import tqdm
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -56,15 +57,14 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir, h5_data_f
         for function in range(1, 25):
             # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
             for instance in range(1,101):
-                feature = {}
                 filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
                 if filename.exists():
                     try:
                         with open(filename, 'rb') as f:
                             pickle.load(f)
-                            print(
-                                f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                            # print(
+                            #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
                             continue
                     except EOFError:
                         print(f"{filename} is empty or corrupted")
@@ -139,7 +139,7 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir, h5_data_f
                 if h5_data_file.exists():
                     with h5py.File(h5_data_file, 'r') as f:
                         if f"{function}_{instance}_{dimension}" in f:
-                            print(f"{function}_{instance}_{dimension} already exists. Skipping feature extraction.")
+                            # print(f"{function}_{instance}_{dimension} already exists. Skipping feature extraction.")
                             continue
 
                 filename = data_dir / "features" / "pickles" / f"tla_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
