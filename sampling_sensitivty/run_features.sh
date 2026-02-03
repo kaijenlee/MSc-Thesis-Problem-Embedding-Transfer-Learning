@@ -1,6 +1,6 @@
 source ../venv/bin/activate
 
-cat << 'EOF' | xargs -P 6 -I {} bash -c "python generate_features.py {}"
+cat << 'EOF' | xargs -P 6 -I {} bash -c "python generate_features_compressed.py {}"
 --feature-type tla --sampling-method lhs --sample-size 10 --data-dir ../../data/samples/pickles
 --feature-type tla --sampling-method sobol --sample-size 10 --data-dir ../../data/samples/pickles
 --feature-type tla --sampling-method uniform --sample-size 10 --data-dir ../../data/samples/pickles
