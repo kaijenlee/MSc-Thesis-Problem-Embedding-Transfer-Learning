@@ -122,8 +122,8 @@ def generate_random_samples(suite: cocoex.Suite, sample_size, runs):
             "X": Xs,
             "Y": Ys
         })
-        df.to_csv(f"data/samples/random_{function}_{instance}_{dimension}_{sample_size}.csv")
-        print(f"Saved random_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # df.to_csv(f"data/samples/random_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # print(f"Saved random_{function}_{instance}_{dimension}_{sample_size}.csv")
     return samples
 
 
@@ -163,8 +163,8 @@ def generate_lhs_samples(suite, sample_size, runs):
             "X": Xs,
             "Y": Ys
         })
-        df.to_csv(f"data/samples/lhs_{function}_{instance}_{dimension}_{sample_size}.csv")
-        print(f"Saved lhs_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # df.to_csv(f"data/samples/lhs_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # print(f"Saved lhs_{function}_{instance}_{dimension}_{sample_size}.csv")
 
     return samples
 
@@ -205,8 +205,8 @@ def generate_ilhs_samples(suite, sample_size, runs):
             "X": Xs,
             "Y": Ys
         })
-        df.to_csv(f"data/samples/ilhs_{function}_{instance}_{dimension}_{sample_size}.csv")
-        print(f"Saved ilhs_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # df.to_csv(f"data/samples/ilhs_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # print(f"Saved ilhs_{function}_{instance}_{dimension}_{sample_size}.csv")
 
     return samples
 
@@ -248,8 +248,8 @@ def generate_sobol_samples(suite, sample_size, runs):
             "X": Xs,
             "Y": Ys
         })
-        df.to_csv(f"data/samples/sobol_{function}_{instance}_{dimension}_{sample_size}.csv")
-        print(f"Saved sobol_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # df.to_csv(f"data/samples/sobol_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # print(f"Saved sobol_{function}_{instance}_{dimension}_{sample_size}.csv")
 
     return samples
 
@@ -317,8 +317,8 @@ def generate_cma_single_samples(suite, sample_size, runs, random_start_point=Fal
             "X": Xs,
             "Y": Ys
         })
-        df.to_csv(f"data/samples/cma_{function}_{instance}_{dimension}_{sample_size}.csv")
-        print(f"Saved cma_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # df.to_csv(f"data/samples/cma_{function}_{instance}_{dimension}_{sample_size}.csv")
+        # print(f"Saved cma_{function}_{instance}_{dimension}_{sample_size}.csv")
 
     return samples
 
@@ -352,7 +352,7 @@ if __name__ == "__main__":
         "bbob",
         "year: 2009 instances: 1-100",
         "function_indices: 1-24 "
-        "dimensions: 2,3,5 "  # TODO increase number of dimensions? 
+        "dimensions: 2,5 "  # TODO increase number of dimensions? 
         "instance_indices: 1-100"
     )
     samples = {}
