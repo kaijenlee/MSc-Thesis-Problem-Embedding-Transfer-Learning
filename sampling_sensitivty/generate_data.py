@@ -293,7 +293,7 @@ def generate_cma_single_samples(suite, sample_size, runs, random_start_point=Fal
                 'maxfevals': np.inf,  # no function evaluation limit
                 'verbose': -9  # suppress all output
             }
-            es = cma.CMAEvolutionStrategy(starting_point, 1, opts)
+            es = cma.CMAEvolutionStrategy(starting_point, 2, opts)
             while budget > 0:
                 X = es.ask()
                 X_list.extend(X)
@@ -301,9 +301,6 @@ def generate_cma_single_samples(suite, sample_size, runs, random_start_point=Fal
                 Y_list.extend(Y)
                 budget -= len(X)
                 es.tell(X, Y)
-
-                if es.stop():
-                    es.stop().clear()  # force CMA-ES to clear stopping conditions
 
             # Trim to exact size
             target_size = sample_size * dimension

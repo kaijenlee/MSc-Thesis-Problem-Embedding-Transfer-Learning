@@ -1,9 +1,11 @@
 import argparse
 from pathlib import Path
 import numpy as np
+import h5py
 import pickle
 from tqdm.auto import tqdm
 import gc
+
 
 def compute_cv(features_array):
     """
@@ -24,70 +26,61 @@ def compute_cv(features_array):
     return cv
 
 
-def process_pickle_file(pkl_path):
+def process_h5_file(h5_path):
     """
-    Process a single pickle file and compute CV for all features.
+    Process a single HDF5 file and compute CV for all features.
     """
-    print(f"Processing: {pkl_path.name}")
-
-    try:
-        with open(pkl_path, 'rb') as f:
-            data = pickle.load(f)
-    except (pickle.UnpicklingError, EOFError) as e:
-        print(f"  ERROR: Failed to load pickle file: {e}")
-        raise  # Re-raise so main() can catch it
+    print(f"Processing: {h5_path.name}")
 
     cv_dict = {}
 
-    # Get all keys upfront
-    keys = list(data.keys())
+    with h5py.File(h5_path, 'r') as f:
+        # Iterate over all groups (function_instance_dimension keys)
+        for key_str in f.keys():
+            # Parse the key string back to tuple
+            parts = key_str.split('_')
+            # Assuming format: function_instance_dimension
+            # You may need to adjust this parsing based on your actual key format
+            function = int(parts[0])
+            instance = int(parts[1])
+            dimension = int(parts[2])
+            key = (function, instance, dimension)
 
-    # Iterate over all (function, instance, dimension) keys
-    for key in keys:
-        function, instance, dim = key
+            # Initialize nested structure
+            cv_dict[key] = {
+                'volume': {'h0': None, 'h1': None, 'h2': None},
+                'axis': {'h0': None, 'h1': None, 'h2': None}
+            }
 
-        # Initialize nested structure
-        cv_dict[key] = {
-            'volume': {'h0': None, 'h1': None, 'h2': None},
-            'axis': {'h0': None, 'h1': None, 'h2': None}
-        }
+            grp = f[key_str]
 
-        # Process each transformation type (volume, axis)
-        for transform in ['volume', 'axis']:
-            if transform not in data[key]:
-                continue
-
-            # Process each homology dimension (h0, h1, h2)
-            for homology in ['h0', 'h1', 'h2']:
-                if homology not in data[key][transform]:
+            # Process each transformation type (volume, axis)
+            for transform in ['volume', 'axis']:
+                if transform not in grp:
                     continue
 
-                features_list = data[key][transform][homology]
+                transform_grp = grp[transform]
 
-                if len(features_list) == 0:
-                    continue
+                # Process each homology dimension (h0, h1, h2)
+                for homology in ['h0', 'h1', 'h2']:
+                    if homology not in transform_grp:
+                        continue
 
-                # Convert list of arrays to single array (n_runs, ...)
-                features_array = np.array(features_list)
+                    # Load the dataset
+                    features_array = transform_grp[homology][:]
 
-                # Compute CV
-                cv = compute_cv(features_array)
+                    if features_array.size == 0:
+                        continue
 
-                cv_dict[key][transform][homology] = cv
+                    # Compute CV
+                    cv = compute_cv(features_array)
 
-                # print(f"  {key} - {transform}/{homology}: shape {cv.shape}, "
-                #       f"mean CV = {np.nanmean(cv):.4f}")
+                    cv_dict[key][transform][homology] = cv
 
-                # Clean up large intermediate arrays
-                del features_array
+                    # Clean up
+                    del features_array
 
-        # Delete processed key's data immediately
-        del data[key]
-
-    # Explicitly delete the large data dictionary
-    del data
-
-    # Force garbage collection to free memory
+    # Force garbage collection
     gc.collect()
 
     return cv_dict
@@ -98,7 +91,7 @@ def main(data_dir):
     Main function to process TinyTLA features.
 
     Args:
-        data_dir: Path to directory containing pickle files
+        data_dir: Path to directory containing HDF5 files
     """
     data_path = Path(data_dir)
 
@@ -106,40 +99,48 @@ def main(data_dir):
         raise FileNotFoundError(f"Directory not found: {data_dir}")
 
     files = [
-        "cma_10_tla.pkl",
-        "cma_25_tla.pkl",
-        "cma_50_tla.pkl",
-        "ilhs_10_tla.pkl",
-        "ilhs_25_tla.pkl",
-        "ilhs_50_tla.pkl",
-        "lhs_10_tla.pkl",
-        "lhs_25_tla.pkl",
-        "lhs_50_tla.pkl",
-        "sobol_10_tla.pkl",
-        "sobol_25_tla.pkl",
-        "sobol_50_tla.pkl",
-        "uniform_10_tla.pkl",
-        "uniform_25_tla.pkl",
-        "uniform_50_tla.pkl",
+        "cma_10_tla.h5",
+        "cma_25_tla.h5",
+        "cma_50_tla.h5",
+        "ilhs_10_tla.h5",
+        "ilhs_25_tla.h5",
+        "ilhs_50_tla.h5",
+        "lhs_10_tla.h5",
+        "lhs_25_tla.h5",
+        "lhs_50_tla.h5",
+        "sobol_10_tla.h5",
+        "sobol_25_tla.h5",
+        "sobol_50_tla.h5",
+        "sobol_75_tla.h5",
+        "sobol_100_tla.h5",
+        "uniform_10_tla.h5",
+        "uniform_25_tla.h5",
+        "uniform_50_tla.h5",
+        "uniform_75_tla.h5",
+        "uniform_100_tla.h5",
+        "cma_random_10_tla.h5",
+        "cma_random_25_tla.h5",
+        "cma_random_50_tla.h5",
+        "cma_random_75_tla.h5",
     ]
 
     output = {}
     failed_files = []
 
     for filename in tqdm(files):
-        pkl_path = data_path / filename
+        h5_path = data_path / filename
 
-        if not pkl_path.exists():
+        if not h5_path.exists():
             print(f"Warning: {filename} not found, skipping...")
             failed_files.append((filename, "File not found"))
             continue
 
-        # Extract key name (e.g., "cma_10" from "cma_10_tla.pkl")
-        key_name = filename.replace('_tla.pkl', '').replace('_ela.pkl', '')
+        # Extract key name (e.g., "cma_10" from "cma_10_tla.h5")
+        key_name = filename.replace('_tla.h5', '').replace('_ela.h5', '')
 
         try:
             # Process file and compute CV
-            cv_dict = process_pickle_file(pkl_path)
+            cv_dict = process_h5_file(h5_path)
 
             # Store in output
             output[key_name] = cv_dict
@@ -150,19 +151,14 @@ def main(data_dir):
             del cv_dict
             gc.collect()
 
-        except (pickle.UnpicklingError, EOFError) as e:
-            print(f"ERROR: Failed to process {filename}: {e}")
-            print(f"This file appears to be corrupted. Skipping...\n")
-            failed_files.append((filename, f"Corrupted: {str(e)}"))
-            continue
         except Exception as e:
-            print(f"ERROR: Unexpected error processing {filename}: {e}")
+            print(f"ERROR: Failed to process {filename}: {e}")
             print(f"Skipping...\n")
-            failed_files.append((filename, f"Unexpected error: {str(e)}"))
+            failed_files.append((filename, f"Error: {str(e)}"))
             continue
 
-    # Save output
-    output_file = data_path / "cv" / "tla_cv.pkl"
+    # Save output as HDF5
+    output_file = data_path / "cv" / "tla_cv.h5"
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_file, 'wb') as f:
@@ -188,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "data_dir",
         type=str,
-        help="Path to directory containing pickle files"
+        help="Path to directory containing HDF5 files"
     )
 
     args = parser.parse_args()
