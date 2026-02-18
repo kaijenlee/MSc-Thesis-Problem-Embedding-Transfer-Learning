@@ -1,14 +1,10 @@
 source ../venv/bin/activate
 
-cat << 'EOF' | xargs -P 14 -I {} bash -c "python generate_features.py {}"
---feature-type ela --sampling-method cma_random --sample-size 75 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method cma_random --sample-size 100 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method sobol --sample-size 100 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method ilhs --sample-size 25 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method lhs --sample-size 25 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method uniform --sample-size 100 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method sobol --sample-size 100 --data-dir ../../data/samples/pickles
---feature-type ela --sampling-method uniform --sample-size 100 --data-dir ../../data/samples/pickles
+cat << 'EOF' | xargs -P 4 -I {} bash -c "python generate_features.py {}"
+#--feature-type ela --sampling-method ilhs --sample-size 75 --data-dir ../../data/samples/pickles
+#--feature-type ela --sampling-method ilhs --sample-size 100 --data-dir ../../data/samples/pickles
+#--feature-type tla --sampling-method ilhs --sample-size 75 --data-dir ../../data/samples/pickles
+#--feature-type tla --sampling-method ilhs --sample-size 100 --data-dir ../../data/samples/pickles
 EOF
 
 #--feature-type tla --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples/pickles
