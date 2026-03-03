@@ -99,12 +99,11 @@ def main(data_dir):
         raise FileNotFoundError(f"Directory not found: {data_dir}")
 
     files = [
-        "cma_10_tla.h5",
-        "cma_25_tla.h5",
-        "cma_50_tla.h5",
         "ilhs_10_tla.h5",
         "ilhs_25_tla.h5",
         "ilhs_50_tla.h5",
+        "ilhs_75_tla.h5",
+        "ilhs_100_tla.h5",
         "lhs_10_tla.h5",
         "lhs_25_tla.h5",
         "lhs_50_tla.h5",

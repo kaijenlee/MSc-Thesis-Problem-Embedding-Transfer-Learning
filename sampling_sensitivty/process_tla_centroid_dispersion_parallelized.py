@@ -304,12 +304,11 @@ def main(data_dir, n_processes=None):
     print(f"Using {n_processes} parallel processes")
 
     files = [
-        "cma_10_tla.h5",
-        "cma_25_tla.h5",
-        "cma_50_tla.h5",
         "ilhs_10_tla.h5",
         "ilhs_25_tla.h5",
         "ilhs_50_tla.h5",
+        "ilhs_75_tla.h5",
+        "ilhs_100_tla.h5",
         "lhs_10_tla.h5",
         "lhs_25_tla.h5",
         "lhs_50_tla.h5",
@@ -338,7 +337,7 @@ def main(data_dir, n_processes=None):
     total_processed = 0
 
     # Open output HDF5 file once for all writes
-    with h5py.File(output_file, 'w') as output_h5:
+    with h5py.File(output_file, 'a') as output_h5:
         for filename in tqdm(files, desc="Overall Progress"):
             h5_path = data_path / filename
 
@@ -349,6 +348,9 @@ def main(data_dir, n_processes=None):
 
             # Extract key name (e.g., "cma_10" from "cma_10_tla.h5")
             key_name = filename.replace('_tla.h5', '')
+            if key_name in output_h5:
+                print(f"Skipping {filename} (already in output)")
+                continue
 
             try:
                 # Process file in parallel and write results
