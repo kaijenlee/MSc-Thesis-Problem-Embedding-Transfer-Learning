@@ -108,12 +108,18 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
         pickle.dump(features, f)
 
 
-def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, h5_data_file):
+def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, output_dir):
     """
     Extract TLA (Topological Landscape Analysis) features.
 
     TODO: Implement TLA feature extraction logic
     """
+
+    h5_data_file = output_dir / f"{args.sampling_method}_{args.sample_size}_tla.h5"
+    if not h5_data_file.exists():
+        with h5py.File(h5_data_file, 'w') as f:
+            pass
+
     kernel_size = 0.0002
     max_range = 1.0
     alpha = 0.2
@@ -307,10 +313,6 @@ def main():
             return
 
     output_dir = Path(args.output_dir).resolve()
-    h5_data_file = output_dir / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.h5"
-    if not h5_data_file.exists():
-        with h5py.File(h5_data_file, 'w') as f:
-            pass
 
     # TODO fix this
     sampling_method = "cma_single" if args.sampling_method == "cma" else args.sampling_method
@@ -325,7 +327,7 @@ def main():
         samples = pickle.load(f)
 
     print(f"Running feature extraction: {args.feature_type} with {args.sampling_method} sampling and sample size {args.sample_size}")
-    extract_ela_features(samples, sampling_method, sample_size, data_dir, output_dir) if args.feature_type == "ela" else extract_tla_features(samples, sampling_method, sample_size, data_dir, h5_data_file)
+    extract_ela_features(samples, sampling_method, sample_size, data_dir, output_dir) if args.feature_type == "ela" else extract_tla_features(samples, sampling_method, sample_size, data_dir, output_dir)
     del samples
     gc.collect()
     with open(processed_files, 'a') as f:
