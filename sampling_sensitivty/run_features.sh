@@ -1,6 +1,6 @@
-source ../venv/bin/activate
+source ../../venv/bin/activate
 
-cat << 'EOF' | xargs -P 8 -I {} bash -c "python generate_features.py {}"
+cat << 'EOF' | xargs -P 8 -I {} bash -c "python generate_features_compressed.py {}"
 --feature-type ela --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples/pickles --output-dir ~/constellation-kaijen/data/dim3feat
 --feature-type ela --sampling-method cma_random --sample-size 25 --data-dir ../../data/samples/pickles --output-dir ~/constellation-kaijen/data/dim3feat
 --feature-type ela --sampling-method cma_random --sample-size 50 --data-dir ../../data/samples/pickles --output-dir ~/constellation-kaijen/data/dim3feat
