@@ -10,6 +10,8 @@ import h5py
 import gc
 from tqdm.auto import tqdm
 import warnings
+import numpy as np
+from sklearn.decomposition import PCA
 warnings.filterwarnings("ignore")
 
 
@@ -48,30 +50,32 @@ def get_distance(X_D, Y_D, alpha=0.2):
     return alpha * X_D + (1 - alpha) * Y_D
 
 
-def extract_ela_features(data, sampling_method, sample_size, data_dir, h5_data_file):
+def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, output_dir):
     """
     Extract ELA (Exploratory Landscape Analysis) features.
     """
-    for dimension in [2]:
+    features = {}
+    for dimension in [5]:
         # for function in tqdm(range(1, 25), position=0):
         for function in range(1, 25):
             # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
             for instance in range(1,101):
-                filename = data_dir / "features" / "pickles" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
+                filename = output_dir / "temp" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
                 if filename.exists():
+                    # print(
+                    #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
                     try:
                         with open(filename, 'rb') as f:
-                            pickle.load(f)
-                            # print(
-                            #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                            file_done = pickle.load(f)
+                            features[(function, instance, dimension)] = file_done
                             continue
                     except EOFError:
                         print(f"{filename} is empty or corrupted")
 
                 # print(
                 #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
-                feature= {
+                features[(function, instance, dimension)] = {
                     "ela_dist": [],
                     "levelset": [],
                     "meta": [],
@@ -80,30 +84,31 @@ def extract_ela_features(data, sampling_method, sample_size, data_dir, h5_data_f
                     "nbc": [],
                 }
                 for runs in range(0, 30):
-                    samples = data[(function, instance, dimension, runs)]
+                    samples = samples_src[(function, instance, dimension, runs)]
                     X = samples['X'] if sampling_method != "cma" else samples['X'][:sample_size * dimension]
                     Y = samples['Y'] if sampling_method != "cma" else samples['Y'][:sample_size * dimension]
 
-                    feature["ela_dist"].append(calculate_ela_distribution(X, Y))
+                    features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
                     try:
                         levelset_features = calculate_ela_level(X, Y, ela_level_resample_iterations=5)
-                        feature["levelset"].append(levelset_features)
+                        features[(function, instance, dimension)]["levelset"].append(levelset_features)
                     except Exception as e:
                         print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
-                        feature["levelset"].append([])
-                    feature["meta"].append(calculate_ela_meta(X, Y))
-                    feature["disp"].append(calculate_dispersion(X, Y))
-                    feature["ic"].append(calculate_information_content(X, Y, seed=100))
-                    feature["nbc"].append(calculate_nbc(X, Y))
+                        features[(function, instance, dimension)]["levelset"].append({})
+                    features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
+                    features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
+                    features[(function, instance, dimension)]["ic"].append(
+                        calculate_information_content(X, Y, seed=100))
+                    features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X, Y))
 
                 with open(filename, 'wb') as f:
-                    pickle.dump(feature, f)
+                    pickle.dump(features[(function, instance, dimension)], f)
 
-                del feature
-                gc.collect()
+    with open(output_dir / f"{sampling_method}_{sample_size}_ela.pkl", 'wb') as f:
+        pickle.dump(features, f)
 
 
-def extract_tla_features(data, sampling_method, sample_size, data_dir, h5_data_file):
+def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, h5_data_file):
     """
     Extract TLA (Topological Landscape Analysis) features.
 
@@ -131,7 +136,7 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir, h5_data_f
         kernel_params={"sigma": [[kernel_size, 0.0], [0.0, kernel_size]]},
     )
 
-    for dimension in [2]:
+    for dimension in [5]:
         # for function in tqdm(range(1, 25), position=0):
         for function in range(1, 25):
             # for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
@@ -177,7 +182,7 @@ def extract_tla_features(data, sampling_method, sample_size, data_dir, h5_data_f
                 #     f"Processing TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
 
                 for runs in range(0, 30):
-                    samples = data[(function, instance, dimension, runs)]
+                    samples = samples_src[(function, instance, dimension, runs)]
                     X = samples['X'] if sampling_method != "cma" else samples['X'][:sample_size * dimension]
                     Y = samples['Y'] if sampling_method != "cma" else samples['Y'][:sample_size * dimension]
 
@@ -278,6 +283,13 @@ def main():
         help="Path to the directory containing CSV files"
     )
 
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        required=True,
+        help="Path to the directory where the features will be saved"
+    )
+
     args = parser.parse_args()
 
     # Convert data_dir to Path and resolve relative paths
@@ -294,9 +306,10 @@ def main():
             print(f"{args.sampling_method}_{args.sample_size}_{args.feature_type} already exists in processed_files.txt. Skipping feature extraction.")
             return
 
-    h5_file_name = data_dir / "features" / "pickles" / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.h5"
-    if not h5_file_name.exists():
-        with h5py.File(h5_file_name, 'w') as f:
+    output_dir = Path(args.output_dir).resolve()
+    h5_data_file = output_dir / f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.h5"
+    if not h5_data_file.exists():
+        with h5py.File(h5_data_file, 'w') as f:
             pass
 
     # TODO fix this
@@ -304,20 +317,20 @@ def main():
     sample_size = args.sample_size
     runs = 30
 
-    os.makedirs(data_dir / "features", exist_ok=True)
-    os.makedirs(data_dir / "features" / "pickles", exist_ok=True)
+    os.makedirs(output_dir / "temp", exist_ok=True)
 
     pickle_file = f"{sampling_method}_100_{runs}.pkl" if args.sampling_method == "cma" or args.sampling_method == "cma_random" else f"{sampling_method}_{sample_size}_{runs}.pkl"
 
     with open(data_dir / pickle_file, "rb") as f:
-        data = pickle.load(f)
+        samples = pickle.load(f)
 
     print(f"Running feature extraction: {args.feature_type} with {args.sampling_method} sampling and sample size {args.sample_size}")
-    extract_ela_features(data, sampling_method, sample_size, data_dir, h5_file_name) if args.feature_type == "ela" else extract_tla_features(data, sampling_method, sample_size, data_dir, h5_file_name)
-    del data
+    extract_ela_features(samples, sampling_method, sample_size, data_dir, output_dir) if args.feature_type == "ela" else extract_tla_features(samples, sampling_method, sample_size, data_dir, h5_data_file)
+    del samples
     gc.collect()
     with open(processed_files, 'a') as f:
         f.write(f"{args.sampling_method}_{args.sample_size}_{args.feature_type}\n")
+    print(f"{args.sampling_method}_{args.sample_size}_{args.feature_type} done")
 
 if __name__ == "__main__":
     main()
