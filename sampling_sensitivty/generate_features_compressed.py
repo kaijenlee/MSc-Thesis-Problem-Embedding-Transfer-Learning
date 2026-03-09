@@ -305,14 +305,15 @@ def main():
         print(f"{args.sampling_method}_{args.sample_size}_{args.feature_type}.pkl already exists. Skipping feature extraction.")
         return
 
-    processed_files = Path(data_dir / "features" / "pickles" / 'processed_files.txt')
+    output_dir = Path(args.output_dir).resolve()
+
+    processed_files = Path(output_dir / 'processed_files.txt')
     if processed_files.exists():
         processed_files_entries = set(processed_files.read_text().splitlines())
         if f"{args.sampling_method}_{args.sample_size}_{args.feature_type}" in processed_files_entries:
             print(f"{args.sampling_method}_{args.sample_size}_{args.feature_type} already exists in processed_files.txt. Skipping feature extraction.")
             return
 
-    output_dir = Path(args.output_dir).resolve()
 
     # TODO fix this
     sampling_method = "cma_single" if args.sampling_method == "cma" else args.sampling_method
