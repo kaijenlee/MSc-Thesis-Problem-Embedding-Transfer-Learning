@@ -85,8 +85,8 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
                 }
                 for runs in range(0, 30):
                     samples = samples_src[(function, instance, dimension, runs)]
-                    X = samples['X'] if sampling_method != "cma" else samples['X'][:sample_size * dimension]
-                    Y = samples['Y'] if sampling_method != "cma" else samples['Y'][:sample_size * dimension]
+                    X = samples['X'][:sample_size * dimension]
+                    Y = samples['Y'][:sample_size * dimension]
 
                     features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
                     try:
