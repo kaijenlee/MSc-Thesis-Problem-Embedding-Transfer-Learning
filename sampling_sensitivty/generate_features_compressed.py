@@ -55,7 +55,7 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
     Extract ELA (Exploratory Landscape Analysis) features.
     """
     features = {}
-    for dimension in [5]:
+    for dimension in [2]:
         # for function in tqdm(range(1, 25), position=0):
         for function in range(1, 25):
             # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
