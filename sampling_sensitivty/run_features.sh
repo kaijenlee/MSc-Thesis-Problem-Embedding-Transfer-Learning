@@ -1,16 +1,16 @@
 source ../../venv/bin/activate
 
 cat << 'EOF' | xargs -P 10 -I {} bash -c "python generate_features_compressed.py {}"
-#--feature-type ela --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type ela --sampling-method cma_random --sample-size 25 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type ela --sampling-method cma_random --sample-size 50 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type ela --sampling-method cma_random --sample-size 75 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type ela --sampling-method cma_random --sample-size 100 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type tla --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type tla --sampling-method cma_random --sample-size 25 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type tla- -sampling-method cma_random --sample-size 50 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type tla --sampling-method cma_random --sample-size 75 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
-#--feature-type tla --sampling-method cma_random --sample-size 100 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type ela --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type ela --sampling-method cma_random --sample-size 25 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type ela --sampling-method cma_random --sample-size 50 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type ela --sampling-method cma_random --sample-size 75 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type ela --sampling-method cma_random --sample-size 100 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type tla --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type tla --sampling-method cma_random --sample-size 25 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type tla --sampling-method cma_random --sample-size 50 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type tla --sampling-method cma_random --sample-size 75 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
+--feature-type tla --sampling-method cma_random --sample-size 100 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim2feat
 EOF
 
 #--feature-type ela --sampling-method cma_random --sample-size 10 --data-dir ../../data/samples --output-dir ~/constellation-kaijen/data/dim5feat

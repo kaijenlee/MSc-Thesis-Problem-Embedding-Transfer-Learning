@@ -115,7 +115,7 @@ def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, ou
     TODO: Implement TLA feature extraction logic
     """
 
-    h5_data_file = output_dir / f"{args.sampling_method}_{args.sample_size}_tla.h5"
+    h5_data_file = output_dir / f"{sampling_method}_{sample_size}_tla.h5"
     if not h5_data_file.exists():
         with h5py.File(h5_data_file, 'w') as f:
             pass
