@@ -50,65 +50,64 @@ def get_distance(X_D, Y_D, alpha=0.2):
     return alpha * X_D + (1 - alpha) * Y_D
 
 
-def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, output_dir):
+def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, output_dir, dimension):
     """
     Extract ELA (Exploratory Landscape Analysis) features.
     """
     features = {}
-    for dimension in [2]:
-        # for function in tqdm(range(1, 25), position=0):
-        for function in range(1, 25):
-            # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
-            for instance in range(1,101):
-                filename = output_dir / "temp" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
+    # for function in tqdm(range(1, 25), position=0):
+    for function in range(1, 25):
+        # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
+        for instance in range(1,101):
+            filename = output_dir / "temp" / f"ela_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
 
-                if filename.exists():
-                    # print(
-                    #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
-                    try:
-                        with open(filename, 'rb') as f:
-                            file_done = pickle.load(f)
-                            features[(function, instance, dimension)] = file_done
-                            continue
-                    except EOFError:
-                        print(f"{filename} is empty or corrupted")
-
+            if filename.exists():
                 # print(
-                #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
-                features[(function, instance, dimension)] = {
-                    "ela_dist": [],
-                    "levelset": [],
-                    "meta": [],
-                    "disp": [],
-                    "ic": [],
-                    "nbc": [],
-                }
-                for runs in range(0, 30):
-                    samples = samples_src[(function, instance, dimension, runs)]
-                    X = samples['X'][:sample_size * dimension]
-                    Y = samples['Y'][:sample_size * dimension]
+                #     f"Skipping as ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension} exists")
+                try:
+                    with open(filename, 'rb') as f:
+                        file_done = pickle.load(f)
+                        features[(function, instance, dimension)] = file_done
+                        continue
+                except EOFError:
+                    print(f"{filename} is empty or corrupted")
 
-                    features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
-                    try:
-                        levelset_features = calculate_ela_level(X, Y, ela_level_resample_iterations=5)
-                        features[(function, instance, dimension)]["levelset"].append(levelset_features)
-                    except Exception as e:
-                        print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
-                        features[(function, instance, dimension)]["levelset"].append({})
-                    features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
-                    features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
-                    features[(function, instance, dimension)]["ic"].append(
-                        calculate_information_content(X, Y, seed=100))
-                    features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X, Y))
+            # print(
+            #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
+            features[(function, instance, dimension)] = {
+                "ela_dist": [],
+                "levelset": [],
+                "meta": [],
+                "disp": [],
+                "ic": [],
+                "nbc": [],
+            }
+            for runs in range(0, 30):
+                samples = samples_src[(function, instance, dimension, runs)]
+                X = samples['X'][:sample_size * dimension]
+                Y = samples['Y'][:sample_size * dimension]
 
-                with open(filename, 'wb') as f:
-                    pickle.dump(features[(function, instance, dimension)], f)
+                features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
+                try:
+                    levelset_features = calculate_ela_level(X, Y, ela_level_resample_iterations=5)
+                    features[(function, instance, dimension)]["levelset"].append(levelset_features)
+                except Exception as e:
+                    print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
+                    features[(function, instance, dimension)]["levelset"].append({})
+                features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
+                features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
+                features[(function, instance, dimension)]["ic"].append(
+                    calculate_information_content(X, Y, seed=100))
+                features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X, Y))
+
+            with open(filename, 'wb') as f:
+                pickle.dump(features[(function, instance, dimension)], f)
 
     with open(output_dir / f"{sampling_method}_{sample_size}_ela.pkl", 'wb') as f:
         pickle.dump(features, f)
 
 
-def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, output_dir):
+def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, output_dir, dimension):
     """
     Extract TLA (Topological Landscape Analysis) features.
 
@@ -142,118 +141,117 @@ def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, ou
         kernel_params={"sigma": [[kernel_size, 0.0], [0.0, kernel_size]]},
     )
 
-    for dimension in [5]:
-        # for function in tqdm(range(1, 25), position=0):
-        for function in range(1, 25):
-            # for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
-            for instance in range(1, 101):
-                if h5_data_file.exists():
-                    with h5py.File(h5_data_file, 'r') as f:
-                        if f"{function}_{instance}_{dimension}" in f:
-                            # print(f"{function}_{instance}_{dimension} already exists. Skipping feature extraction.")
-                            continue
 
-                filename = data_dir / "features" / "pickles" / f"tla_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
-                features = {
-                    'volume': {
-                        'h0': [],
-                        'h1': [],
-                        'h2': []
-                    },
-                    'axis': {
-                        'h0': [],
-                        'h1': [],
-                        'h2': []
-                    }
-                }
-                if filename.exists():
-                    try:
-                        with open(filename, 'rb') as f:
-                            file_done = pickle.load(f)
-
-                        with h5py.File(h5_data_file, 'a') as hf:
-                            grp = hf.create_group(f"{function}_{instance}_{dimension}")
-                            for k1, val1 in file_done.items():
-                                grp2 = grp.create_group(k1)
-                                for k2, val2 in val1.items():
-                                    grp2.create_dataset(k2, data=val2)
-
-                        del file_done
-                        gc.collect()
+    for function in range(1, 25):
+        # for instance in tqdm(range(1, 101), position=1, desc=f"TLA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
+        for instance in range(1, 101):
+            if h5_data_file.exists():
+                with h5py.File(h5_data_file, 'r') as f:
+                    if f"{function}_{instance}_{dimension}" in f:
+                        # print(f"{function}_{instance}_{dimension} already exists. Skipping feature extraction.")
                         continue
-                    except EOFError:
-                        print(f"{filename} is empty or corrupted")
 
-                # print(
-                #     f"Processing TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
+            filename = data_dir / "features" / "pickles" / f"tla_{sampling_method}_{sample_size}_{function}_{instance}_{dimension}.pkl"
+            features = {
+                'volume': {
+                    'h0': [],
+                    'h1': [],
+                    'h2': []
+                },
+                'axis': {
+                    'h0': [],
+                    'h1': [],
+                    'h2': []
+                }
+            }
+            if filename.exists():
+                try:
+                    with open(filename, 'rb') as f:
+                        file_done = pickle.load(f)
 
-                for runs in range(0, 30):
-                    samples = samples_src[(function, instance, dimension, runs)]
-                    X = samples['X'][:sample_size * dimension]
-                    Y = samples['Y'][:sample_size * dimension]
+                    with h5py.File(h5_data_file, 'a') as hf:
+                        grp = hf.create_group(f"{function}_{instance}_{dimension}")
+                        for k1, val1 in file_done.items():
+                            grp2 = grp.create_group(k1)
+                            for k2, val2 in val1.items():
+                                grp2.create_dataset(k2, data=val2)
 
-                    X_volume = volume_transform(X)
-                    X_axis = axis_transform(X)
+                    del file_done
+                    gc.collect()
+                    continue
+                except EOFError:
+                    print(f"{filename} is empty or corrupted")
 
-                    # Normalizing
-                    X_volume_D = cdist(X_volume, X_volume, "euclidean")
-                    X_volume_D_norm = X_volume_D / np.abs(X_volume_D).max(axis=0)
-                    X_axis_D = cdist(X_axis, X_axis, "euclidean")
-                    X_axis_D_norm = X_axis_D / np.abs(X_axis_D).max(axis=0)
+            # print(
+            #     f"Processing TLA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
 
-                    Y_D = cdist(np.asmatrix(Y).T, np.asmatrix(Y).T, "euclidean")
-                    Y_D_norm = Y_D / Y_D.max()
+            for runs in range(0, 30):
+                samples = samples_src[(function, instance, dimension, runs)]
+                X = samples['X'][:sample_size * dimension]
+                Y = samples['Y'][:sample_size * dimension]
 
-                    rips_volume = Rips(maxdim=dimension, coeff=2, verbose=False)
-                    rips_axis = Rips(maxdim=dimension, coeff=2, verbose=False)
+                X_volume = volume_transform(X)
+                X_axis = axis_transform(X)
 
-                    distances_volume = get_distance(X_volume_D_norm, Y_D_norm, alpha=alpha)
-                    distances_axis = get_distance(X_axis_D_norm, Y_D_norm, alpha=alpha)
+                # Normalizing
+                X_volume_D = cdist(X_volume, X_volume, "euclidean")
+                X_volume_D_norm = X_volume_D / np.abs(X_volume_D).max(axis=0)
+                X_axis_D = cdist(X_axis, X_axis, "euclidean")
+                X_axis_D_norm = X_axis_D / np.abs(X_axis_D).max(axis=0)
 
-                    diagrams_volume = rips_volume.fit_transform(distances_volume, distance_matrix=True)
-                    diagrams_axis = rips_axis.fit_transform(distances_axis, distance_matrix=True)
+                Y_D = cdist(np.asmatrix(Y).T, np.asmatrix(Y).T, "euclidean")
+                Y_D_norm = Y_D / Y_D.max()
 
-                    d0_volume = diagrams_volume[0]
-                    d1_volume = diagrams_volume[1]
-                    d2_volume = diagrams_volume[2]
+                rips_volume = Rips(maxdim=2, coeff=2, verbose=False)
+                rips_axis = Rips(maxdim=2, coeff=2, verbose=False)
 
-                    d0_axis = diagrams_axis[0]
-                    d1_axis = diagrams_axis[1]
-                    d2_axis = diagrams_axis[2]
+                distances_volume = get_distance(X_volume_D_norm, Y_D_norm, alpha=alpha)
+                distances_axis = get_distance(X_axis_D_norm, Y_D_norm, alpha=alpha)
 
-                    sel0_volume = np.isfinite(d0_volume.sum(axis=1))
-                    img0_volume = pimgr0.transform(d0_volume[sel0_volume, :])
+                diagrams_volume = rips_volume.fit_transform(distances_volume, distance_matrix=True)
+                diagrams_axis = rips_axis.fit_transform(distances_axis, distance_matrix=True)
 
-                    sel1_volume = np.isfinite(d1_volume.sum(axis=1))
-                    img1_volume = pimgr1.transform(d1_volume[sel1_volume, :])
+                d0_volume = diagrams_volume[0]
+                d1_volume = diagrams_volume[1]
+                d2_volume = diagrams_volume[2]
 
-                    sel2_volume = np.isfinite(d2_volume.sum(axis=1))
-                    img2_volume = pimgr2.transform(d2_volume[sel2_volume, :])
+                d0_axis = diagrams_axis[0]
+                d1_axis = diagrams_axis[1]
+                d2_axis = diagrams_axis[2]
 
-                    sel0_axis = np.isfinite(d0_axis.sum(axis=1))
-                    img0_axis = pimgr0.transform(d0_axis[sel0_axis, :])
+                sel0_volume = np.isfinite(d0_volume.sum(axis=1))
+                img0_volume = pimgr0.transform(d0_volume[sel0_volume, :])
 
-                    sel1_axis = np.isfinite(d1_axis.sum(axis=1))
-                    img1_axis = pimgr1.transform(d1_axis[sel1_axis, :])
+                sel1_volume = np.isfinite(d1_volume.sum(axis=1))
+                img1_volume = pimgr1.transform(d1_volume[sel1_volume, :])
 
-                    sel2_axis = np.isfinite(d2_axis.sum(axis=1))
-                    img2_axis = pimgr2.transform(d2_axis[sel2_axis, :])
+                sel2_volume = np.isfinite(d2_volume.sum(axis=1))
+                img2_volume = pimgr2.transform(d2_volume[sel2_volume, :])
 
-                    features['volume']['h0'].append(img0_volume)
-                    features['volume']['h1'].append(img1_volume)
-                    features['volume']['h2'].append(img2_volume)
-                    features['axis']['h0'].append(img0_axis)
-                    features['axis']['h1'].append(img1_axis)
-                    features['axis']['h2'].append(img2_axis)
-                    
-                with h5py.File(h5_data_file, 'a') as f:
-                    grp = f.create_group(f"{function}_{instance}_{dimension}")
-                    for k1, val1 in features.items():
-                        grp2 = grp.create_group(k1)
-                        for k2, val2 in val1.items():
-                            grp2.create_dataset(k2, data=val2)
-                del features
-                gc.collect()
+                sel0_axis = np.isfinite(d0_axis.sum(axis=1))
+                img0_axis = pimgr0.transform(d0_axis[sel0_axis, :])
+
+                sel1_axis = np.isfinite(d1_axis.sum(axis=1))
+                img1_axis = pimgr1.transform(d1_axis[sel1_axis, :])
+
+                sel2_axis = np.isfinite(d2_axis.sum(axis=1))
+                img2_axis = pimgr2.transform(d2_axis[sel2_axis, :])
+
+                features['volume']['h0'].append(img0_volume)
+                features['volume']['h1'].append(img1_volume)
+                features['volume']['h2'].append(img2_volume)
+                features['axis']['h0'].append(img0_axis)
+                features['axis']['h1'].append(img1_axis)
+                features['axis']['h2'].append(img2_axis)
+
+            with h5py.File(h5_data_file, 'a') as f:
+                grp = f.create_group(f"{function}_{instance}_{dimension}")
+                for k1, val1 in features.items():
+                    grp2 = grp.create_group(k1)
+                    for k2, val2 in val1.items():
+                        grp2.create_dataset(k2, data=val2)
+            del features
+            gc.collect()
 
 
 
@@ -296,7 +294,15 @@ def main():
         help="Path to the directory where the features will be saved"
     )
 
+    parser.add_argument(
+        "--dimension",
+        type=int,
+        required=True,
+        help="Dimension of the landscape"
+    )
+
     args = parser.parse_args()
+    dimension = args.dimension
 
     # Convert data_dir to Path and resolve relative paths
     data_dir = Path(args.data_dir).resolve()
@@ -328,7 +334,7 @@ def main():
         samples = pickle.load(f)
 
     print(f"Running feature extraction: {args.feature_type} with {args.sampling_method} sampling and sample size {args.sample_size}")
-    extract_ela_features(samples, sampling_method, sample_size, data_dir, output_dir) if args.feature_type == "ela" else extract_tla_features(samples, sampling_method, sample_size, data_dir, output_dir)
+    extract_ela_features(samples, sampling_method, sample_size, data_dir, output_dir, dimension) if args.feature_type == "ela" else extract_tla_features(samples, sampling_method, sample_size, data_dir, output_dir, dimension)
     del samples
     gc.collect()
     with open(processed_files, 'a') as f:
