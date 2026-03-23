@@ -107,6 +107,8 @@ def main(data_dir):
         "lhs_10_tla.h5",
         "lhs_25_tla.h5",
         "lhs_50_tla.h5",
+        "lhs_75_tla.h5",
+        "lhs_100_tla.h5",
         "sobol_10_tla.h5",
         "sobol_25_tla.h5",
         "sobol_50_tla.h5",
@@ -121,6 +123,7 @@ def main(data_dir):
         "cma_random_25_tla.h5",
         "cma_random_50_tla.h5",
         "cma_random_75_tla.h5",
+        "cma_random_100_tla.h5",
     ]
 
     output = {}
@@ -156,8 +159,7 @@ def main(data_dir):
             failed_files.append((filename, f"Error: {str(e)}"))
             continue
 
-    # Save output as HDF5
-    output_file = data_path / "cv" / "tla_cv.h5"
+    output_file = data_path / "cv" / "tla_cv.pkl"
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_file, 'wb') as f:

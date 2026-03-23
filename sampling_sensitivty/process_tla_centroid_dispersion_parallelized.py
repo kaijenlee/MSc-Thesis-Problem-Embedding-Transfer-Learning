@@ -312,6 +312,8 @@ def main(data_dir, n_processes=None):
         "lhs_10_tla.h5",
         "lhs_25_tla.h5",
         "lhs_50_tla.h5",
+        "lhs_75_tla.h5",
+        "lhs_100_tla.h5",
         "sobol_10_tla.h5",
         "sobol_25_tla.h5",
         "sobol_50_tla.h5",
@@ -326,6 +328,7 @@ def main(data_dir, n_processes=None):
         "cma_random_25_tla.h5",
         "cma_random_50_tla.h5",
         "cma_random_75_tla.h5",
+        "cma_random_100_tla.h5",
     ]
 
     # Create output directory
