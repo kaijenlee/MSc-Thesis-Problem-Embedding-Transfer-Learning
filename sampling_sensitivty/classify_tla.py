@@ -207,8 +207,12 @@ def run_classification(all_data, labels, n_jobs=1):
         # Test on mean features
         X_test_mean = mean_features[test_idx]
         X_test_mean_scaled = scaler.transform(X_test_mean)[:, valid_cols]
-        X_test_mean_scaled = np.nan_to_num(X_test_mean_scaled, nan=0.0)
+        X_test_mean_scaled = np.nan_to_num(X_test_mean_scaled, nan=0.0,
+                                            posinf=0.0, neginf=0.0)
+        X_test_mean_scaled = np.clip(X_test_mean_scaled, -1e10, 1e10)
         X_test_mean_pca = pca.transform(X_test_mean_scaled)
+        X_test_mean_pca = np.nan_to_num(X_test_mean_pca, nan=0.0,
+                                         posinf=0.0, neginf=0.0)
         y_test = labels[test_idx]
         y_pred_mean = rf.predict(X_test_mean_pca)
 
@@ -226,8 +230,13 @@ def run_classification(all_data, labels, n_jobs=1):
             for run_idx in range(N_RUNS):
                 X_run = all_data[test_row, run_idx, :].reshape(1, -1)
                 X_run_scaled = scaler.transform(X_run)[:, valid_cols]
-                X_run_scaled = np.nan_to_num(X_run_scaled, nan=0.0)
+                X_run_scaled = np.nan_to_num(X_run_scaled, nan=0.0,
+                                              posinf=0.0, neginf=0.0)
+                # Clip extreme values that overflow float32
+                X_run_scaled = np.clip(X_run_scaled, -1e10, 1e10)
                 X_run_pca = pca.transform(X_run_scaled)
+                X_run_pca = np.nan_to_num(X_run_pca, nan=0.0,
+                                           posinf=0.0, neginf=0.0)
                 pred = rf.predict(X_run_pca)[0]
                 run_preds.append(pred)
 
