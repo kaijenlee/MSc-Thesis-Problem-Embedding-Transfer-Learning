@@ -15,13 +15,12 @@ import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
+# Configuration/--------------------
 
 N_FUNCTIONS = 24
 N_INSTANCES = 100
 N_RUNS = 30
-DIMENSION = 2
+DIMENSION = 5
 
 OMIT_FEATURES = {
     "disp.diff_median_02", "disp.ratio_median_02",
