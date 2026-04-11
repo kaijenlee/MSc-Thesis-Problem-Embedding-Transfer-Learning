@@ -76,11 +76,11 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
             #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
             features[(function, instance, dimension)] = {
                 "ela_dist": [],
-                "levelset": [],
                 "meta": [],
                 "disp": [],
                 "ic": [],
                 "nbc": [],
+                "pca": [],
             }
             for runs in range(0, 30):
                 samples = samples_src[(function, instance, dimension, runs)]
@@ -88,17 +88,12 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
                 Y = samples['Y'][:sample_size * dimension]
 
                 features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
-                try:
-                    levelset_features = calculate_ela_level(X, Y, ela_level_resample_iterations=5)
-                    features[(function, instance, dimension)]["levelset"].append(levelset_features)
-                except Exception as e:
-                    print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
-                    features[(function, instance, dimension)]["levelset"].append({})
                 features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
                 features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
                 features[(function, instance, dimension)]["ic"].append(
                     calculate_information_content(X, Y, seed=100))
                 features[(function, instance, dimension)]["nbc"].append(calculate_nbc(X, Y))
+                features[(function, instance, dimension)]["pca"].append(calculate_pca(X, Y))
 
             with open(filename, 'wb') as f:
                 pickle.dump(features[(function, instance, dimension)], f)
