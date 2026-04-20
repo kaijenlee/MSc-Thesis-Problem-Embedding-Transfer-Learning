@@ -176,97 +176,97 @@ def subsample_train_indices(train_idx, train_labels, n_inst_per_class, rng):
 
 
 def run_learning_curve(median_features, all_run_features, labels,
-                        instance_counts, run_counts, n_repeats, n_jobs=1):
+                        pairs, n_repeats, n_jobs=1):
     """
-    For each (n_inst, n_runs) cell, run 5-fold CV with `n_repeats`
+    For each (n_inst, n_runs) pair, run 5-fold CV with `n_repeats`
     random subsamples per fold.
+
+    Parameters
+    ----------
+    pairs : list of (n_inst, n_runs) tuples
+        Explicit list of training-size points to evaluate.
 
     Returns
     -------
-    dict with arrays of shape (n_inst_grid, n_runs_grid, N_FOLDS, n_repeats)
+    dict with arrays of shape (n_pairs, N_FOLDS, n_repeats)
     """
-    n_grid_inst = len(instance_counts)
-    n_grid_runs = len(run_counts)
+    n_pairs = len(pairs)
 
-    acc_median = np.full((n_grid_inst, n_grid_runs, N_FOLDS, n_repeats), np.nan)
-    acc_allruns = np.full((n_grid_inst, n_grid_runs, N_FOLDS, n_repeats), np.nan)
+    acc_median = np.full((n_pairs, N_FOLDS, n_repeats), np.nan)
+    acc_allruns = np.full((n_pairs, N_FOLDS, n_repeats), np.nan)
 
     skf = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=RANDOM_STATE)
     folds = list(skf.split(np.zeros(len(labels)), labels))
 
-    total_cells = n_grid_inst * n_grid_runs
-    cell_count = 0
+    for i_pair, (n_inst, n_runs) in enumerate(pairs):
+        print(f"  Pair {i_pair + 1}/{n_pairs}: "
+              f"instances={n_inst}, runs={n_runs} "
+              f"(total per class = {n_inst * n_runs})")
 
-    for i_inst, n_inst in enumerate(instance_counts):
-        for i_runs, n_runs in enumerate(run_counts):
-            cell_count += 1
-            print(f"  Cell {cell_count}/{total_cells}: "
-                  f"instances={n_inst}, runs={n_runs}")
+        for fold_idx, (train_idx, test_idx) in enumerate(folds):
+            y_test = labels[test_idx]
+            X_test_median = median_features[test_idx]
+            X_test_runs = all_run_features[test_idx]  # (n_test, N_RUNS, N_FEATURES)
 
-            for fold_idx, (train_idx, test_idx) in enumerate(folds):
-                y_test = labels[test_idx]
-                X_test_median = median_features[test_idx]
-                X_test_runs = all_run_features[test_idx]  # (n_test, N_RUNS, N_FEATURES)
+            for rep in range(n_repeats):
+                rng = np.random.default_rng(
+                    RANDOM_STATE + 1000 * fold_idx + rep)
 
-                for rep in range(n_repeats):
-                    rng = np.random.default_rng(
-                        RANDOM_STATE + 1000 * fold_idx + rep)
+                # Subsample instances from train fold
+                train_labels = labels[train_idx]
+                sel_inst = subsample_train_indices(
+                    train_idx, train_labels, n_inst, rng)
 
-                    # Subsample instances from train fold
-                    train_labels = labels[train_idx]
-                    sel_inst = subsample_train_indices(
-                        train_idx, train_labels, n_inst, rng)
+                # Subsample runs (same indices for all selected instances)
+                sel_runs = rng.choice(N_RUNS, size=n_runs, replace=False)
 
-                    # Subsample runs (same indices for all selected instances)
-                    sel_runs = rng.choice(N_RUNS, size=n_runs, replace=False)
+                # Build training matrix: (n_classes * n_inst * n_runs, N_FEATURES)
+                X_train = all_run_features[np.ix_(sel_inst, sel_runs)] \
+                    .reshape(len(sel_inst) * n_runs, N_FEATURES)
+                y_train = np.repeat(labels[sel_inst], n_runs)
 
-                    # Build training matrix: (n_classes * n_inst * n_runs, N_FEATURES)
-                    X_train = all_run_features[np.ix_(sel_inst, sel_runs)] \
-                        .reshape(len(sel_inst) * n_runs, N_FEATURES)
-                    y_train = np.repeat(labels[sel_inst], n_runs)
+                # Standardize
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_train_scaled = np.nan_to_num(X_train_scaled, nan=0.0)
 
-                    # Standardize
-                    scaler = StandardScaler()
-                    X_train_scaled = scaler.fit_transform(X_train)
-                    X_train_scaled = np.nan_to_num(X_train_scaled, nan=0.0)
+                # Train RF
+                rf = RandomForestClassifier(
+                    n_estimators=RF_N_ESTIMATORS,
+                    max_depth=RF_MAX_DEPTH,
+                    max_features=RF_MAX_FEATURES,
+                    min_samples_leaf=RF_MIN_SAMPLES_LEAF,
+                    random_state=RANDOM_STATE + rep,
+                    n_jobs=n_jobs,
+                )
+                rf.fit(X_train_scaled, y_train)
 
-                    # Train RF
-                    rf = RandomForestClassifier(
-                        n_estimators=RF_N_ESTIMATORS,
-                        max_depth=RF_MAX_DEPTH,
-                        max_features=RF_MAX_FEATURES,
-                        min_samples_leaf=RF_MIN_SAMPLES_LEAF,
-                        random_state=RANDOM_STATE + rep,
-                        n_jobs=n_jobs,
-                    )
-                    rf.fit(X_train_scaled, y_train)
+                # Test on median features
+                X_test_median_scaled = np.nan_to_num(
+                    scaler.transform(X_test_median), nan=0.0)
+                y_pred_median = rf.predict(X_test_median_scaled)
+                acc_median[i_pair, fold_idx, rep] = \
+                    accuracy_score(y_test, y_pred_median)
 
-                    # Test on median features
-                    X_test_median_scaled = np.nan_to_num(
-                        scaler.transform(X_test_median), nan=0.0)
-                    y_pred_median = rf.predict(X_test_median_scaled)
-                    acc_median[i_inst, i_runs, fold_idx, rep] = \
-                        accuracy_score(y_test, y_pred_median)
+                # Test on all 30 runs
+                n_test = len(test_idx)
+                X_test_runs_2d = X_test_runs.reshape(n_test * N_RUNS, N_FEATURES)
+                X_test_runs_scaled = np.nan_to_num(
+                    scaler.transform(X_test_runs_2d), nan=0.0)
+                y_pred_runs = rf.predict(X_test_runs_scaled)
+                y_test_repeated = np.repeat(y_test, N_RUNS)
+                acc_allruns[i_pair, fold_idx, rep] = \
+                    accuracy_score(y_test_repeated, y_pred_runs)
 
-                    # Test on all 30 runs
-                    n_test = len(test_idx)
-                    X_test_runs_2d = X_test_runs.reshape(n_test * N_RUNS, N_FEATURES)
-                    X_test_runs_scaled = np.nan_to_num(
-                        scaler.transform(X_test_runs_2d), nan=0.0)
-                    y_pred_runs = rf.predict(X_test_runs_scaled)
-                    y_test_repeated = np.repeat(y_test, N_RUNS)
-                    acc_allruns[i_inst, i_runs, fold_idx, rep] = \
-                        accuracy_score(y_test_repeated, y_pred_runs)
-
-            # Cell summary
-            cell_med = acc_median[i_inst, i_runs]
-            cell_run = acc_allruns[i_inst, i_runs]
-            print(f"    median test: {cell_med.mean():.4f} (±{cell_med.std():.4f})")
-            print(f"    runs test:   {cell_run.mean():.4f} (±{cell_run.std():.4f})")
+        # Pair summary
+        pair_med = acc_median[i_pair]
+        pair_run = acc_allruns[i_pair]
+        print(f"    median test: {pair_med.mean():.4f} (±{pair_med.std():.4f})")
+        print(f"    runs test:   {pair_run.mean():.4f} (±{pair_run.std():.4f})")
 
     return {
-        "instance_counts": np.array(instance_counts),
-        "run_counts": np.array(run_counts),
+        "instance_counts": np.array([p[0] for p in pairs]),
+        "run_counts": np.array([p[1] for p in pairs]),
         "acc_median": acc_median,
         "acc_allruns": acc_allruns,
     }
@@ -277,7 +277,8 @@ def run_learning_curve(median_features, all_run_features, labels,
 # ---------------------------------------------------------------------------
 
 def main(input_dir, output_dir=None, configs=None, n_repeats=3, n_jobs=1,
-         instance_counts=None, run_counts=None):
+         instance_counts=None, run_counts=None, pairs_mode=False,
+         output_name="ela_learning_curve_results.h5"):
     if output_dir is None:
         output_dir = input_dir
     os.makedirs(output_dir, exist_ok=True)
@@ -287,8 +288,22 @@ def main(input_dir, output_dir=None, configs=None, n_repeats=3, n_jobs=1,
     if run_counts is None:
         run_counts = RUN_COUNTS
 
+    # Build the list of (n_inst, n_runs) pairs
+    if pairs_mode:
+        if len(instance_counts) != len(run_counts):
+            raise ValueError(
+                f"In pairs mode, --instance-counts and --run-counts must "
+                f"have the same length, got {len(instance_counts)} and "
+                f"{len(run_counts)}."
+            )
+        pairs = list(zip(instance_counts, run_counts))
+    else:
+        pairs = [(n_i, n_r) for n_i in instance_counts for n_r in run_counts]
+
     input_dir = Path(input_dir)
-    output_file = Path(output_dir) / "ela_learning_curve_results.h5"
+    if not output_name.endswith(".h5"):
+        output_name = output_name + ".h5"
+    output_file = Path(output_dir) / output_name
 
     if configs:
         config_keys = [c for c in configs if c in ELA_FILES]
@@ -298,11 +313,12 @@ def main(input_dir, output_dir=None, configs=None, n_repeats=3, n_jobs=1,
     print(f"ELA Learning Curve Experiment")
     print(f"Features: {N_FEATURES}")
     print(f"Folds: {N_FOLDS}")
-    print(f"Instance grid: {instance_counts}")
-    print(f"Run grid:      {run_counts}")
-    print(f"Repeats per cell: {n_repeats}")
-    print(f"Total fits per config: "
-          f"{len(instance_counts) * len(run_counts) * N_FOLDS * n_repeats}")
+    print(f"Mode: {'pairs (manual)' if pairs_mode else 'cartesian grid'}")
+    print(f"Pairs ({len(pairs)}):")
+    for n_i, n_r in pairs:
+        print(f"  instances={n_i}, runs={n_r} -> {n_i * n_r} per class")
+    print(f"Repeats per pair: {n_repeats}")
+    print(f"Total fits per config: {len(pairs) * N_FOLDS * n_repeats}")
     print(f"Configs: {len(config_keys)}")
     print(f"n_jobs: {n_jobs}")
     print()
@@ -333,8 +349,7 @@ def main(input_dir, output_dir=None, configs=None, n_repeats=3, n_jobs=1,
             print("  Running learning curve experiment...")
             results = run_learning_curve(
                 median_features, all_run_features, labels,
-                instance_counts=instance_counts,
-                run_counts=run_counts,
+                pairs=pairs,
                 n_repeats=n_repeats,
                 n_jobs=n_jobs,
             )
@@ -347,6 +362,7 @@ def main(input_dir, output_dir=None, configs=None, n_repeats=3, n_jobs=1,
             grp.create_dataset("acc_allruns", data=results["acc_allruns"])
             grp.attrs["n_repeats"] = n_repeats
             grp.attrs["n_folds"] = N_FOLDS
+            grp.attrs["pairs_mode"] = pairs_mode
 
             del median_features, all_run_features
             gc.collect()
@@ -355,11 +371,11 @@ def main(input_dir, output_dir=None, configs=None, n_repeats=3, n_jobs=1,
     print(f"\nResults saved to: {output_file}")
     print(f"\nOutput h5 structure:")
     print(f"  {{config_key}}/")
-    print(f"    instance_counts  (n_inst_grid,)")
-    print(f"    run_counts       (n_runs_grid,)")
-    print(f"    acc_median       (n_inst_grid, n_runs_grid, n_folds, n_repeats)")
-    print(f"    acc_allruns      (n_inst_grid, n_runs_grid, n_folds, n_repeats)")
-    print(f"    attrs: n_repeats, n_folds")
+    print(f"    instance_counts  (n_pairs,)")
+    print(f"    run_counts       (n_pairs,)")
+    print(f"    acc_median       (n_pairs, n_folds, n_repeats)")
+    print(f"    acc_allruns      (n_pairs, n_folds, n_repeats)")
+    print(f"    attrs: n_repeats, n_folds, pairs_mode")
 
 
 if __name__ == "__main__":
@@ -373,14 +389,27 @@ if __name__ == "__main__":
     parser.add_argument("--configs", nargs="+", default=None,
                         help="Specific configs to process.")
     parser.add_argument("--n-repeats", type=int, default=3,
-                        help="Random subsamples per cell (default: 3).")
+                        help="Random subsamples per pair (default: 3).")
     parser.add_argument("--n-jobs", type=int, default=1,
                         help="Parallel jobs for Random Forest (default: 1).")
     parser.add_argument("--instance-counts", nargs="+", type=int, default=None,
-                        help=f"Override instance grid (default: {INSTANCE_COUNTS}).")
+                        help=f"Instance values (default: {INSTANCE_COUNTS}). "
+                             f"In default mode this is one axis of a Cartesian grid; "
+                             f"with --pairs it must match the length of --run-counts.")
     parser.add_argument("--run-counts", nargs="+", type=int, default=None,
-                        help=f"Override run grid (default: {RUN_COUNTS}).")
+                        help=f"Run values (default: {RUN_COUNTS}). "
+                             f"In default mode this is the other axis of the grid; "
+                             f"with --pairs it must match --instance-counts.")
+    parser.add_argument("--pairs", action="store_true",
+                        help="Treat --instance-counts and --run-counts as zipped "
+                             "(n_inst, n_runs) pairs instead of a Cartesian grid.")
+    parser.add_argument("--output-name", type=str,
+                        default="ela_learning_curve_results.h5",
+                        help="Filename for the output h5 (default: "
+                             "ela_learning_curve_results.h5). "
+                             "'.h5' will be appended if missing.")
     args = parser.parse_args()
     main(input_dir=args.input_dir, output_dir=args.output_dir,
          configs=args.configs, n_repeats=args.n_repeats, n_jobs=args.n_jobs,
-         instance_counts=args.instance_counts, run_counts=args.run_counts)
+         instance_counts=args.instance_counts, run_counts=args.run_counts,
+         pairs_mode=args.pairs, output_name=args.output_name)
