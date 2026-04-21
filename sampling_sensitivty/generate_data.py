@@ -6,6 +6,7 @@ import cma
 import cocoex
 import numpy as np
 from scipy.stats import qmc
+from scipy.spatial.distance import cdist
 from tqdm.auto import tqdm
 import pandas as pd
 import os
@@ -36,7 +37,7 @@ def parse_arguments():
         '-s', '--sampling-method',
         type=str,
         required=True,
-        choices=['cma_single', 'cma_random', 'uniform', 'lhs', 'ilhs', 'sobol'],
+        choices=['cma_single', 'cma_random', 'uniform', 'lhs', 'ilhs', 'lhs_random_cd', 'sobol'],
         help='Sampling method to use for data generation',
         metavar='METHOD'
     )
@@ -169,16 +170,163 @@ def generate_lhs_samples(suite, sample_size, runs):
     return samples
 
 
+def _improved_lhs(n, k, dup=1):
+    """
+    Improved Latin Hypercube Sampling (Beachkofski-Grandhi algorithm).
+
+    This implements the algorithm from:
+        Beachkofski, B., Grandhi, R. (2002) "Improved Distributed Hypercube Sampling"
+        American Institute of Aeronautics and Astronautics Paper 2002-1274.
+
+    Based on the MATLAB implementation by John Burkardt and the R `lhs` package
+    implementation (improvedLHS) used by the R `flacco` package.
+
+    The algorithm greedily constructs a Latin Hypercube design one point at a time.
+    At each step, it generates `dup` candidate points satisfying the LHS constraint,
+    then selects the candidate whose nearest-neighbor distance to existing points is
+    closest to the optimal spacing: opt = n / n^(1/k).
+
+    Args:
+        n: Number of sample points to generate.
+        k: Number of dimensions.
+        dup: Duplication factor controlling the number of candidate points per step.
+             Higher values give better space-filling but slower computation.
+             A value of 5 is reasonable (Burkardt). Default is 1.
+
+    Returns:
+        np.ndarray: An (n, k) array with values in [0, 1].
+    """
+    # Optimal spacing between points
+    opt = n / n ** (1.0 / k)
+
+    # Result matrix: stores the integer bin assignments (0-indexed) for each point
+    # result[i, j] = the bin index for point i in dimension j
+    result = np.empty((n, k), dtype=int)
+
+    # Track which bins are available in each dimension
+    # available[j] = list of available bin indices for dimension j
+    available = [list(range(n)) for _ in range(k)]
+
+    # Place the first point randomly
+    for j in range(k):
+        idx = np.random.randint(len(available[j]))
+        result[0, j] = available[j].pop(idx)
+
+    # Greedily place remaining points
+    for i in range(1, n):
+        # Number of candidates to generate
+        n_candidates = dup * (n - i)
+
+        # Generate candidate points: for each dimension, sample from available bins
+        candidates = np.empty((n_candidates, k), dtype=int)
+        for j in range(k):
+            n_avail = len(available[j])
+            # Sample bin indices (with replacement from available bins)
+            rand_indices = np.random.randint(0, n_avail, size=n_candidates)
+            candidates[:, j] = np.array(available[j])[rand_indices]
+
+        # Compute distances from each candidate to all existing points
+        # Use center-of-bin coordinates for distance calculation
+        existing_coords = (result[:i, :] + 0.5) / n
+        candidate_coords = (candidates + 0.5) / n
+
+        # Compute minimum distance from each candidate to existing points
+        dists = cdist(candidate_coords, existing_coords)
+        min_dists = dists.min(axis=1)
+
+        # Select the candidate whose min distance is closest to opt/n
+        # (opt is in bin-space, so we compare in the same scale)
+        target_dist = opt / n
+        best_idx = np.argmin(np.abs(min_dists - target_dist))
+
+        best_candidate = candidates[best_idx]
+
+        # Record the chosen point
+        result[i, :] = best_candidate
+
+        # Remove chosen bins from available lists
+        for j in range(k):
+            chosen_bin = best_candidate[j]
+            if chosen_bin in available[j]:
+                available[j].remove(chosen_bin)
+
+    # Transform integer bins to [0, 1] by adding a random offset within each cell
+    design = np.empty((n, k))
+    for i in range(n):
+        for j in range(k):
+            design[i, j] = (result[i, j] + np.random.uniform()) / n
+
+    return design
+
+
 def generate_ilhs_samples(suite, sample_size, runs):
     """
-    Generate samples using Improved Latin Hypercube Sampling.
+    Generate samples using Improved Latin Hypercube Sampling (Beachkofski-Grandhi).
+
+    This is the iLHS method referenced in:
+        Renau et al. (2020) "Exploratory Landscape Analysis is Strongly Sensitive
+        to the Sampling Strategy", PPSN 2020.
+
+    It uses the "improved" LHS designs from the R `lhs` package (improvedLHS),
+    which implements the Beachkofski-Grandhi greedy algorithm that selects points
+    to be as close to an optimal even spacing as possible.
 
     Args:
         suite: COCO problem suite
         sample_size: Number of samples per dimension
+        runs: Number of independent runs
 
     Returns:
-        dict: Dictionary with (function, instance, dimension) as keys and {'X': X, 'Y': Y} as values
+        dict: Dictionary with (function, instance, dimension, run) as keys
+              and {'X': X, 'Y': Y} as values
+    """
+    samples = {}
+    for problem in tqdm(suite):
+        function, instance, dimension = parse_problem_id(problem.id)
+        Xs = []
+        Ys = []
+
+        for run in range(runs):
+            n = sample_size * dimension
+
+            # Generate improved LHS design in [0, 1]^d
+            # dup=5 is a reasonable default per Burkardt's recommendation,
+            # matching typical usage in the R lhs package
+            X_unit = _improved_lhs(n=n, k=dimension, dup=5)
+
+            # Scale to [LOWER_BOUND, UPPER_BOUND]
+            X = X_unit * (UPPER_BOUND - LOWER_BOUND) + LOWER_BOUND
+
+            # Evaluate the problem
+            Y = np.array([problem(x) for x in X])
+            Xs.append(X)
+            Ys.append(Y)
+            samples[(function, instance, dimension, run)] = {'X': X, 'Y': Y}
+        df = pd.DataFrame({
+            "X": Xs,
+            "Y": Ys
+        })
+
+    return samples
+
+
+def generate_lhs_random_cd_samples(suite, sample_size, runs):
+    """
+    Generate samples using Latin Hypercube Sampling optimized via random
+    centered-discrepancy criterion (scipy's optimization="random-cd").
+
+    Note: This was previously called "ilhs" but has been renamed to avoid
+    confusion with the Beachkofski-Grandhi Improved LHS algorithm used
+    in the R flacco/lhs packages.
+
+    Args:
+        suite: COCO problem suite
+        sample_size: Number of samples per dimension
+        runs: Number of independent runs
+
+    Returns:
+        dict: Dictionary with (function, instance, dimension, run) as keys
+              and {'X': X, 'Y': Y} as values
     """
     samples = {}
     for problem in tqdm(suite):
@@ -205,8 +353,6 @@ def generate_ilhs_samples(suite, sample_size, runs):
             "X": Xs,
             "Y": Ys
         })
-        # df.to_csv(f"data/samples/ilhs_{function}_{instance}_{dimension}_{sample_size}.csv")
-        # print(f"Saved ilhs_{function}_{instance}_{dimension}_{sample_size}.csv")
 
     return samples
 
@@ -349,7 +495,7 @@ if __name__ == "__main__":
         "bbob",
         "year: 2009 instances: 1-100",
         "function_indices: 1-24 "
-        "dimensions: 2,5 "  # TODO increase number of dimensions? 
+        "dimensions: 2,5,10 "  # TODO increase number of dimensions? 
         "instance_indices: 1-100"
     )
     samples = {}
@@ -365,6 +511,8 @@ if __name__ == "__main__":
             samples = generate_lhs_samples(suite, args.sample_size, args.runs)
         case 'ilhs':
             samples = generate_ilhs_samples(suite, args.sample_size, args.runs)
+        case 'lhs_random_cd':
+            samples = generate_lhs_random_cd_samples(suite, args.sample_size, args.runs)
         case 'sobol':
             samples = generate_sobol_samples(suite, args.sample_size, args.runs)
         case _:

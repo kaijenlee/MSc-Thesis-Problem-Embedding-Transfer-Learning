@@ -287,20 +287,29 @@ def build_table(result_dirs, dimensions):
                 row["cv_training_folds_function_median_median"] = \
                     aggregate_median_then_stat(feat_cvs_train, np.median)
 
-                # --- Classification accuracy (columns 11-12) ---
+                # --- Classification accuracy ---
                 if (h5_file is not None and config_key in h5_file):
                     subkey = f"n_runs_{n_runs_train:02d}"
                     if subkey in h5_file[config_key]:
                         grp = h5_file[config_key][subkey]
-                        fold_accs = grp["fold_accuracies_median"][:]
-                        row["accuracy_mean"] = np.mean(fold_accs)
-                        row["accuracy_sd"] = np.std(fold_accs, ddof=1)
+                        # Median-test accuracy
+                        fold_accs_median = grp["fold_accuracies_median"][:]
+                        row["accuracy_median_mean"] = np.mean(fold_accs_median)
+                        row["accuracy_median_sd"] = np.std(fold_accs_median, ddof=1)
+                        # All-runs accuracy
+                        fold_accs_runs = grp["fold_accuracies_all_runs"][:]
+                        row["accuracy_allruns_mean"] = np.mean(fold_accs_runs)
+                        row["accuracy_allruns_sd"] = np.std(fold_accs_runs, ddof=1)
                     else:
-                        row["accuracy_mean"] = np.nan
-                        row["accuracy_sd"] = np.nan
+                        row["accuracy_median_mean"] = np.nan
+                        row["accuracy_median_sd"] = np.nan
+                        row["accuracy_allruns_mean"] = np.nan
+                        row["accuracy_allruns_sd"] = np.nan
                 else:
-                    row["accuracy_mean"] = np.nan
-                    row["accuracy_sd"] = np.nan
+                    row["accuracy_median_mean"] = np.nan
+                    row["accuracy_median_sd"] = np.nan
+                    row["accuracy_allruns_mean"] = np.nan
+                    row["accuracy_allruns_sd"] = np.nan
 
                 rows.append(row)
 
@@ -319,8 +328,10 @@ def build_table(result_dirs, dimensions):
         "cv_function_median_median",
         "cv_training_folds_function_median_mean",
         "cv_training_folds_function_median_median",
-        "accuracy_mean",
-        "accuracy_sd",
+        "accuracy_median_mean",
+        "accuracy_median_sd",
+        "accuracy_allruns_mean",
+        "accuracy_allruns_sd",
     ])
 
     df.sort_values(

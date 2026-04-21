@@ -50,11 +50,15 @@ RF_MAX_DEPTH = None
 RF_MAX_FEATURES = "sqrt"
 RF_MIN_SAMPLES_LEAF = 1
 
+# OMIT_FEATURES = {
+#     "disp.diff_median_02", "disp.ratio_median_02",
+#     "ela_level.lda_qda_50", "ela_level.lda_qda_25",
+#     "ic.eps_ratio", "disp.ratio_mean_02", "disp.diff_mean_02",
+#     "ela_level.lda_qda_10", "ela_meta.quad_simple.cond",
+# }
+
 OMIT_FEATURES = {
-    "disp.diff_median_02", "disp.ratio_median_02",
-    "ela_level.lda_qda_50", "ela_level.lda_qda_25",
-    "ic.eps_ratio", "disp.ratio_mean_02", "disp.diff_mean_02",
-    "ela_level.lda_qda_10", "ela_meta.quad_simple.cond",
+    'ela_meta.quad_simple.cond', 'ela_level.lda_qda_50'
 }
 OMIT_GROUPS = {"levelset"}
 
@@ -86,6 +90,12 @@ ELA_FEATURE_GROUPS = {
         "ic.h_max", "ic.eps_s", "ic.eps_max", "ic.eps_ratio",
         "ic.m0", "ic.costs_runtime",
     ],
+    "pca": [
+        "pca.expl_var.cov_x", "pca.expl_var.cor_x", "pca.expl_var.cov_init",
+        "pca.expl_var.cor_init", "pca.expl_var_PC1.cov_x",
+        "pca.expl_var_PC1.cor_x", "pca.expl_var_PC1.cov_init",
+        "pca.expl_var_PC1.cor_init", "pca.costs_runtime",
+    ]
 }
 
 FILTERED_FEATURES = []
@@ -98,19 +108,19 @@ for _grp, _feats in ELA_FEATURE_GROUPS.items():
 N_FEATURES = len(FILTERED_FEATURES)
 
 ELA_FILES = {
-    "cma_random_10": "cma_random_10_ela.pkl",
+    # "cma_random_10": "cma_random_10_ela.pkl",
     "cma_random_25": "cma_random_25_ela.pkl", "cma_random_50": "cma_random_50_ela.pkl",
     "cma_random_75": "cma_random_75_ela.pkl", "cma_random_100": "cma_random_100_ela.pkl",
-    "ilhs_10": "ilhs_10_ela.pkl",
+    # "ilhs_10": "ilhs_10_ela.pkl",
     "ilhs_25": "ilhs_25_ela.pkl", "ilhs_50": "ilhs_50_ela.pkl",
     "ilhs_75": "ilhs_75_ela.pkl", "ilhs_100": "ilhs_100_ela.pkl",
-    "lhs_10": "lhs_10_ela.pkl",
+    # "lhs_10": "lhs_10_ela.pkl",
     "lhs_25": "lhs_25_ela.pkl", "lhs_50": "lhs_50_ela.pkl",
     "lhs_75": "lhs_75_ela.pkl", "lhs_100": "lhs_100_ela.pkl",
-    "sobol_10": "sobol_10_ela.pkl",
+    # "sobol_10": "sobol_10_ela.pkl",
     "sobol_25": "sobol_25_ela.pkl", "sobol_50": "sobol_50_ela.pkl",
     "sobol_75": "sobol_75_ela.pkl", "sobol_100": "sobol_100_ela.pkl",
-    "uniform_10": "uniform_10_ela.pkl",
+    # "uniform_10": "uniform_10_ela.pkl",
     "uniform_25": "uniform_25_ela.pkl", "uniform_50": "uniform_50_ela.pkl",
     "uniform_75": "uniform_75_ela.pkl", "uniform_100": "uniform_100_ela.pkl",
 }
