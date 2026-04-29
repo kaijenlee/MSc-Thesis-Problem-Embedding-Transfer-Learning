@@ -66,6 +66,8 @@ RF_MAX_FEATURES = "sqrt"
 RF_MIN_SAMPLES_LEAF = 1
 
 OMIT_GROUPS = {"levelset"}
+## To ommit for ELA dimension 2
+OMIT_FEATURES = {'disp.diff_median_02', 'disp.ratio_median_02', 'disp.ratio_mean_02', 'ela_meta.quad_simple.cond', 'disp.diff_mean_02'}
 
 ELA_FEATURE_GROUPS = {
     "ela_dist": [
@@ -205,7 +207,7 @@ def build_instance_data(data, dimension):
     omitted_features = []
     kept_indices = []
     for feat_idx, (grp, feat) in enumerate(CANDIDATE_FEATURES):
-        if has_bad[feat_idx]:
+        if has_bad[feat_idx] or feat in OMIT_FEATURES:
             omitted_features.append((grp, feat))
         else:
             kept_features.append((grp, feat))
