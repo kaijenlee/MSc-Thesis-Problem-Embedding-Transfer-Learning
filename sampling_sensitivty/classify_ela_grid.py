@@ -66,8 +66,7 @@ RF_MAX_FEATURES = "sqrt"
 RF_MIN_SAMPLES_LEAF = 1
 
 OMIT_GROUPS = {"levelset"}
-## To ommit for ELA dimension 2
-OMIT_FEATURES = {'disp.diff_median_02', 'disp.ratio_median_02', 'disp.ratio_mean_02', 'ela_meta.quad_simple.cond', 'disp.diff_mean_02'}
+OMIT_FEATURES = {}
 
 ELA_FEATURE_GROUPS = {
     "ela_dist": [
@@ -421,6 +420,12 @@ def main(input_dir, output_dir=None, configs=None,
         if n < 1 or n > N_RUNS:
             raise ValueError(
                 f"n_runs_train must be in [1, {N_RUNS}], got {n}")
+
+    # Update Omit
+    if dimension == 2:
+        OMIT_FEATURES = {'disp.diff_median_02', 'disp.ratio_median_02', 'disp.ratio_mean_02', 'ela_meta.quad_simple.cond', 'disp.diff_mean_02'}
+    elif dimension == 5:
+        OMIT_FEATURES = {'ela_meta.quad_simple.cond'}
 
     input_dir = Path(input_dir)
     output_file = Path(output_dir) / "ela_classification_subsample.h5"
