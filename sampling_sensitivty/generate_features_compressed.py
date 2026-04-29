@@ -190,11 +190,11 @@ def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, ou
 
                 # Normalizing
                 X_volume_D = cdist(X_volume, X_volume, "euclidean")
-                X_volume_D_norm = X_volume_D / np.abs(X_volume_D).max(axis=0)
+                X_volume_D_norm = X_volume_D / np.abs(X_volume_D).max()
                 X_axis_D = cdist(X_axis, X_axis, "euclidean")
-                X_axis_D_norm = X_axis_D / np.abs(X_axis_D).max(axis=0)
+                X_axis_D_norm = X_axis_D / np.abs(X_axis_D).max()
 
-                Y_D = cdist(np.asmatrix(Y).T, np.asmatrix(Y).T, "euclidean")
+                Y_D = cdist(Y.reshape(-1, 1), Y.reshape(-1, 1), "euclidean")
                 Y_D_norm = Y_D / Y_D.max()
 
                 rips_volume = Rips(maxdim=2, coeff=2, verbose=False)
