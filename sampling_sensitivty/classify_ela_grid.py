@@ -66,7 +66,6 @@ RF_MAX_FEATURES = "sqrt"
 RF_MIN_SAMPLES_LEAF = 1
 
 OMIT_GROUPS = {"levelset"}
-OMIT_FEATURES = {}
 
 ELA_FEATURE_GROUPS = {
     "ela_dist": [
@@ -104,8 +103,9 @@ ELA_FEATURE_GROUPS = {
     ]
 }
 
-# Candidate features: everything from non-omitted groups.
-# NaN-containing features are detected and dropped per configuration.
+# Candidate features: everything from non-omitted groups, minus costs_runtime.
+# NaN-containing features and dimension-specific omissions are handled at
+# runtime inside build_instance_data.
 CANDIDATE_FEATURES = []
 for _grp, _feats in ELA_FEATURE_GROUPS.items():
     if _grp in OMIT_GROUPS:
@@ -141,13 +141,27 @@ def parse_sample_size(config_key):
     raise ValueError(f"Cannot parse sample size from config key: {config_key}")
 
 
+def get_omit_features(dimension):
+    """Return the set of features to omit for a given dimensionality."""
+    if dimension == 2:
+        return {
+            'disp.diff_median_02', 'disp.ratio_median_02',
+            'disp.ratio_mean_02', 'ela_meta.quad_simple.cond',
+            'disp.diff_mean_02',
+        }
+    elif dimension in (5, 10):
+        return {'ela_meta.quad_simple.cond'}
+    return set()
+
+
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
 
-def build_instance_data(data, dimension):
+def build_instance_data(data, dimension, omit_features=None,
+                        drop_nan_features=False):
     """
-    Build per-instance data structures, automatically detecting and
+    Build per-instance data structures, optionally detecting and
     dropping features that contain any NaN values.
 
     Parameters
@@ -156,13 +170,19 @@ def build_instance_data(data, dimension):
         Loaded ELA pickle data.
     dimension : int
         Problem dimensionality (used as key into the data dict).
+    omit_features : set or None
+        Feature names to omit in addition to NaN/Inf-containing ones.
+    drop_nan_features : bool, default False
+        If True, automatically detect and drop columns that contain any
+        NaN or Inf values in the per-run data.  If False, all candidate
+        features (minus ``omit_features``) are kept as-is.
 
     Returns
     -------
     median_features : np.ndarray, shape (n_total, n_kept_features)
-        Median across 30 runs per instance (NaN-free columns only).
+        Median across 30 runs per instance.
     all_run_features : np.ndarray, shape (n_total, N_RUNS, n_kept_features)
-        All 30 runs per instance (NaN-free columns only).
+        All 30 runs per instance.
     labels : np.ndarray, shape (n_total,)
         Function class labels (0-23).
     instance_indices : np.ndarray, shape (n_total,)
@@ -170,8 +190,11 @@ def build_instance_data(data, dimension):
     kept_features : list of (str, str)
         (group, feature_name) tuples that were retained.
     omitted_features : list of (str, str)
-        (group, feature_name) tuples that were dropped due to NaN.
+        (group, feature_name) tuples that were dropped.
     """
+    if omit_features is None:
+        omit_features = set()
+
     n_total = N_FUNCTIONS * N_INSTANCES
 
     # First pass: build arrays with all candidate features
@@ -198,16 +221,20 @@ def build_instance_data(data, dimension):
                 for run in range(N_RUNS):
                     runs_all[row, run, feat_idx] = values[run]
 
-    # Second pass: detect columns with any NaN or Inf in the per-run data
-    flat = runs_all.reshape(-1, N_CANDIDATE_FEATURES)
-    has_bad = np.any(~np.isfinite(flat), axis=0)
+    # Second pass: optionally detect columns with NaN or Inf, and apply
+    # explicit omit_features.
+    if drop_nan_features:
+        flat = runs_all.reshape(-1, N_CANDIDATE_FEATURES)
+        has_bad = np.any(~np.isfinite(flat), axis=0)
+    else:
+        has_bad = np.zeros(N_CANDIDATE_FEATURES, dtype=bool)
 
     kept_features = []
-    omitted_features = []
+    omitted_features_list = []
     kept_indices = []
     for feat_idx, (grp, feat) in enumerate(CANDIDATE_FEATURES):
-        if has_bad[feat_idx] or feat in OMIT_FEATURES:
-            omitted_features.append((grp, feat))
+        if has_bad[feat_idx] or feat in omit_features:
+            omitted_features_list.append((grp, feat))
         else:
             kept_features.append((grp, feat))
             kept_indices.append(feat_idx)
@@ -217,7 +244,7 @@ def build_instance_data(data, dimension):
     all_run_features = runs_all[:, :, kept_indices]
 
     return (median_features, all_run_features, labels, instance_indices,
-            kept_features, omitted_features)
+            kept_features, omitted_features_list)
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +427,7 @@ def run_classification(median_features, all_run_features, labels,
 
 def main(input_dir, output_dir=None, configs=None,
          n_instances_train_list=None, n_runs_train_list=None,
-         dimension=5, n_jobs=1):
+         dimension=5, n_jobs=1, drop_nan_features=False):
     if output_dir is None:
         output_dir = input_dir
     os.makedirs(output_dir, exist_ok=True)
@@ -421,11 +448,8 @@ def main(input_dir, output_dir=None, configs=None,
             raise ValueError(
                 f"n_runs_train must be in [1, {N_RUNS}], got {n}")
 
-    # Update Omit
-    if dimension == 2:
-        OMIT_FEATURES = {'disp.diff_median_02', 'disp.ratio_median_02', 'disp.ratio_mean_02', 'ela_meta.quad_simple.cond', 'disp.diff_mean_02'}
-    elif dimension == 5 or dimension == 10:
-        OMIT_FEATURES = {'ela_meta.quad_simple.cond'}
+    # Get dimension-specific feature omissions
+    omit_features = get_omit_features(dimension)
 
     input_dir = Path(input_dir)
     output_file = Path(output_dir) / "ela_classification_subsample.h5"
@@ -441,7 +465,10 @@ def main(input_dir, output_dir=None, configs=None,
 
     print(f"ELA Classification Experiment (subsampled instances & runs)")
     print(f"Dimension: {dimension}")
-    print(f"Candidate features: {N_CANDIDATE_FEATURES} (NaN features dropped per config)")
+    print(f"Candidate features: {N_CANDIDATE_FEATURES}")
+    print(f"Drop NaN/Inf features: {drop_nan_features}")
+    if omit_features:
+        print(f"Dimension-specific omissions: {omit_features}")
     print(f"Folds: {N_FOLDS} (20 train / 80 test per class per fold)")
     print(f"n_instances_train sweep: {n_instances_train_list}")
     print(f"n_runs_train sweep:      {n_runs_train_list}")
@@ -486,7 +513,9 @@ def main(input_dir, output_dir=None, configs=None,
             print("  Building feature matrices...")
             median_features, all_run_features, labels, _, \
                 kept_features, omitted_features = \
-                build_instance_data(data, dimension)
+                build_instance_data(data, dimension,
+                                    omit_features=omit_features,
+                                    drop_nan_features=drop_nan_features)
             del data
 
             n_features = len(kept_features)
@@ -494,7 +523,7 @@ def main(input_dir, output_dir=None, configs=None,
                   f"{N_CANDIDATE_FEATURES}")
             if omitted_features:
                 omitted_names = [f for _, f in omitted_features]
-                print(f"  Omitted (NaN/Inf): {omitted_names}")
+                print(f"  Omitted (NaN/Inf/dim): {omitted_names}")
 
             config_grp = out.require_group(config_key)
 
@@ -646,10 +675,15 @@ if __name__ == "__main__":
                         help="Parallel jobs for Random Forest (default: 1).")
     parser.add_argument("--dimension", type=int, default=5,
                         help="Problem dimensionality (default: 5).")
+    parser.add_argument("--drop-nan-features", action="store_true",
+                        default=False,
+                        help="Automatically drop features containing "
+                             "NaN/Inf values (default: off).")
     args = parser.parse_args()
     main(input_dir=args.input_dir, output_dir=args.output_dir,
          configs=args.configs,
          n_instances_train_list=args.n_instances_train,
          n_runs_train_list=args.n_runs_train,
          dimension=args.dimension,
-         n_jobs=args.n_jobs)
+         n_jobs=args.n_jobs,
+         drop_nan_features=args.drop_nan_features)
