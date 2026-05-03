@@ -424,7 +424,7 @@ def main(input_dir, output_dir=None, configs=None,
     # Update Omit
     if dimension == 2:
         OMIT_FEATURES = {'disp.diff_median_02', 'disp.ratio_median_02', 'disp.ratio_mean_02', 'ela_meta.quad_simple.cond', 'disp.diff_mean_02'}
-    elif dimension == 5:
+    elif dimension == 5 or dimension == 10:
         OMIT_FEATURES = {'ela_meta.quad_simple.cond'}
 
     input_dir = Path(input_dir)
