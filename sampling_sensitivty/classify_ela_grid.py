@@ -147,7 +147,7 @@ def get_omit_features(dimension):
         return {
             'disp.diff_median_02', 'disp.ratio_median_02',
             'disp.ratio_mean_02', 'ela_meta.quad_simple.cond',
-            'disp.diff_mean_02',
+            'disp.diff_mean_02', 'ic.eps_ratio'
         }
     elif dimension in (5, 10):
         return {'ela_meta.quad_simple.cond'}
