@@ -58,12 +58,12 @@ ELA_FEATURE_GROUPS = {
         "ela_distr.skewness", "ela_distr.kurtosis",
         "ela_distr.number_of_peaks", "ela_distr.costs_runtime",
     ],
-    "levelset": [
-        "ela_level.mmce_lda_10", "ela_level.mmce_qda_10", "ela_level.lda_qda_10",
-        "ela_level.mmce_lda_25", "ela_level.mmce_qda_25", "ela_level.lda_qda_25",
-        "ela_level.mmce_lda_50", "ela_level.mmce_qda_50", "ela_level.lda_qda_50",
-        "ela_level.costs_runtime",
-    ],
+    # "levelset": [
+    #     "ela_level.mmce_lda_10", "ela_level.mmce_qda_10", "ela_level.lda_qda_10",
+    #     "ela_level.mmce_lda_25", "ela_level.mmce_qda_25", "ela_level.lda_qda_25",
+    #     "ela_level.mmce_lda_50", "ela_level.mmce_qda_50", "ela_level.lda_qda_50",
+    #     "ela_level.costs_runtime",
+    # ],
     "meta": [
         "ela_meta.lin_simple.adj_r2", "ela_meta.lin_simple.intercept",
         "ela_meta.lin_simple.coef.min", "ela_meta.lin_simple.coef.max",

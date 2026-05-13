@@ -478,10 +478,10 @@ def plot_cv_vs_accuracy(df, output_path=None, figsize=(16, 18), dpi=180,
             jx_acc = x_base + 0.15 + rng.uniform(-0.06, 0.06)
 
             # CV: open marker
-            # ax.scatter(jx_cv, row[cv_col],
-            #            facecolors='none', edgecolors=color,
-            #            marker=marker, s=30, linewidths=1,
-            #            alpha=0.7, zorder=3)
+            ax.scatter(jx_cv, row[cv_col],
+                       facecolors='none', edgecolors=color,
+                       marker=marker, s=30, linewidths=1,
+                       alpha=0.7, zorder=3)
             # Accuracy: filled marker
             ax.scatter(jx_acc, row[acc_col],
                        facecolors=color, edgecolors=color,
@@ -516,10 +516,10 @@ def plot_cv_vs_accuracy(df, output_path=None, figsize=(16, 18), dpi=180,
     legend_elements.append(
         Line2D([0], [0], marker='o', color='w', markerfacecolor='grey',
                markersize=7, label='Accuracy (filled)', alpha=0.8))
-    # legend_elements.append(
-    #     Line2D([0], [0], marker='o', color='w', markerfacecolor='none',
-    #            markeredgecolor='grey', markeredgewidth=1,
-    #            markersize=7, label='CV (open)', alpha=0.8))
+    legend_elements.append(
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='none',
+               markeredgecolor='grey', markeredgewidth=1,
+               markersize=7, label='CV (open)', alpha=0.8))
 
     # Spacer
     legend_elements.append(
@@ -562,3 +562,212 @@ def plot_cv_vs_accuracy(df, output_path=None, figsize=(16, 18), dpi=180,
 
     plt.show()
     return fig, axes
+
+
+def plot_config_ranking(
+        df: pd.DataFrame,
+        target: str = "acc_mean",
+        strategy_col: str = "sampling_strategy",
+        budget_col: str = "n_feval_train",
+        sample_size_col: str = "sample_size_per_dim",
+        n_instances_col: str = "n_instances_train",
+        n_runs_col: str = "n_runs_train",
+        top_n: int = 10,
+        show_budget: bool = True,
+        strategy_colors: dict[str, str] | None = None,
+        figsize: tuple[int, int] = (14, 6),
+        title: str = "All configurations ranked by accuracy",
+) -> tuple[plt.Figure, pd.DataFrame]:
+    """
+    Bar chart of every (strategy, size, instances, runs) configuration,
+    sorted by accuracy. Bars are coloured by sampling strategy.
+    Budget is optionally overlaid as a secondary y-axis scatter.
+
+    Parameters
+    ----------
+    df : Aggregated DataFrame (one row per configuration).
+    target : Column name for accuracy.
+    top_n : Number of top configurations to annotate.
+    show_budget : Whether to overlay budget dots on secondary axis.
+
+    Returns
+    -------
+    fig : The matplotlib figure.
+    df_sorted : DataFrame sorted by accuracy (for further inspection).
+    """
+    from matplotlib.patches import Patch
+
+    df_sorted = df.sort_values(target, ascending=False).reset_index(drop=True)
+
+    # Config label
+    df_sorted["config_label"] = (
+            df_sorted[strategy_col].astype(str) + " | " +
+            df_sorted[sample_size_col].astype(int).astype(str) + "d | " +
+            df_sorted[n_instances_col].astype(int).astype(str) + "i | " +
+            df_sorted[n_runs_col].astype(int).astype(str) + "r"
+    )
+
+    # Colours
+    if strategy_colors is None:
+        strategies = sorted(df_sorted[strategy_col].unique())
+        cmap = plt.cm.get_cmap("tab10", len(strategies))
+        strategy_colors = {s: cmap(i) for i, s in enumerate(strategies)}
+    colors = df_sorted[strategy_col].map(strategy_colors)
+
+    fig, ax1 = plt.subplots(figsize=figsize)
+    ax1.bar(
+        range(len(df_sorted)), df_sorted[target],
+        color=colors, width=1.0, edgecolor="none", alpha=0.85,
+    )
+    ax1.set_xlabel("Configuration (sorted by accuracy)")
+    ax1.set_ylabel("Classification accuracy")
+    ax1.set_title(title)
+
+    # Secondary axis: budget
+    if show_budget and budget_col in df_sorted.columns:
+        ax2 = ax1.twinx()
+        ax2.scatter(
+            range(len(df_sorted)), df_sorted[budget_col],
+            s=3, color="black", alpha=0.4, zorder=5,
+        )
+        ax2.set_ylabel("Function evaluation budget", color="grey")
+        ax2.tick_params(axis="y", labelcolor="grey")
+
+    # Legend
+    legend_elements = [
+        Patch(facecolor=c, label=s) for s, c in strategy_colors.items()
+    ]
+    if show_budget and budget_col in df_sorted.columns:
+        legend_elements.append(
+            plt.Line2D([0], [0], marker="o", color="w",
+                       markerfacecolor="black", markersize=4, label="Budget")
+        )
+    ax1.legend(handles=legend_elements, title="Strategy", loc="upper right")
+
+    # Annotate top-N
+    if top_n > 0:
+        top = df_sorted.head(top_n)
+        text_lines = [f"Top {top_n} configurations:"]
+        for rank, (_, row) in enumerate(top.iterrows(), 1):
+            text_lines.append(
+                f"  {rank:>2d}. {row['config_label']}  "
+                f"acc={row[target]:.3f}  "
+                f"budget={int(row[budget_col]):,}"
+            )
+        ax1.text(
+            0.40, 0.97, "\n".join(text_lines),
+            transform=ax1.transAxes, fontsize=7,
+            verticalalignment="top", fontfamily="monospace",
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.9),
+        )
+
+    fig.tight_layout()
+    return fig, df_sorted
+
+
+def plot_best_config_per_budget(
+        df: pd.DataFrame,
+        target: str = "acc_mean",
+        strategy_col: str = "sampling_strategy",
+        budget_col: str = "n_feval_train",
+        sample_size_col: str = "sample_size_per_dim",
+        n_instances_col: str = "n_instances_train",
+        n_runs_col: str = "n_runs_train",
+        strategy_colors: dict[str, str] | None = None,
+        strategy_labels: dict[str, str] | None = None,
+        label_fontsize: float = 6.0,
+        figsize: tuple[int, int] = (21, 7),
+        title: str = "Best configuration at each function evaluation budget",
+        log_x: bool = True,
+) -> tuple[plt.Figure, pd.DataFrame]:
+    """
+    Scatter plot of accuracy vs function evaluation budget, showing only the
+    best-performing configuration at each unique budget level.
+
+    Each point is labelled with its full configuration (strategy | size | instances | runs)
+    and coloured by sampling strategy.
+
+    Parameters
+    ----------
+    df : Aggregated DataFrame (one row per configuration).
+    target : Column name for accuracy.
+    strategy_colors : Mapping of strategy name -> hex colour.
+    strategy_labels : Mapping of strategy name -> display label.
+    label_fontsize : Font size for point labels.
+    log_x : Whether to use log scale on x-axis.
+
+    Returns
+    -------
+    fig : The matplotlib figure.
+    best : DataFrame of best configurations (one per unique budget).
+    """
+    from matplotlib.patches import Patch
+
+    if strategy_colors is None:
+        strategy_colors = STRATEGY_COLORS
+    if strategy_labels is None:
+        strategy_labels = STRATEGY_LABELS
+
+    # Best config at each unique budget
+    best = (
+        df.loc[df.groupby(budget_col)[target].idxmax()]
+        .sort_values(budget_col)
+        .reset_index(drop=True)
+    )
+
+    # Build config label using display names
+    best["config_label"] = (
+            best[strategy_col].map(strategy_labels).fillna(best[strategy_col]) + " | " +
+            best[sample_size_col].astype(int).astype(str) + "d | " +
+            best[n_instances_col].astype(int).astype(str) + "i | " +
+            best[n_runs_col].astype(int).astype(str) + "r"
+    )
+
+    colors = best[strategy_col].map(strategy_colors).fillna("grey")
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Scatter
+    ax.scatter(
+        best[budget_col], best[target],
+        c=colors, s=60, zorder=5,
+        edgecolors="white", linewidth=0.5,
+    )
+
+    # Step line to show frontier
+    ax.step(
+        best[budget_col], best[target],
+        where="post", color="grey", alpha=0.3, linewidth=1,
+    )
+
+    # Label each point with alternating offsets
+    offsets = [(8, 12), (8, -18), (-8, 14), (-8, -16)]
+    for i, (_, row) in enumerate(best.iterrows()):
+        dx, dy = offsets[i % len(offsets)]
+        ax.annotate(
+            row["config_label"],
+            xy=(row[budget_col], row[target]),
+            xytext=(dx, dy), textcoords="offset points",
+            fontsize=label_fontsize, ha="left", va="bottom",
+            color=strategy_colors.get(row[strategy_col], "black"),
+            arrowprops=dict(arrowstyle="-", color="grey", alpha=0.4, linewidth=0.5),
+        )
+
+    ax.set_xlabel("Function evaluation budget")
+    ax.set_ylabel("Classification accuracy")
+    ax.set_title(title)
+    if log_x:
+        ax.set_xscale("log")
+
+    # Legend — only strategies that appear in the best set
+    present = best[strategy_col].unique()
+    legend_order = ["ilhs", "sobol", "lhs", "lhs_rcd", "uniform", "cma_random"]
+    legend_elements = [
+        Patch(facecolor=strategy_colors[s], label=strategy_labels.get(s, s))
+        for s in legend_order if s in present and s in strategy_colors
+    ]
+    ax.legend(handles=legend_elements, title="Strategy", loc="lower right")
+    ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    return fig, best

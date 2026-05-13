@@ -127,6 +127,8 @@ ELA_FILES = {
     "ilhs_75": "ilhs_75_ela.pkl", "ilhs_100": "ilhs_100_ela.pkl",
     "lhs_25": "lhs_25_ela.pkl", "lhs_50": "lhs_50_ela.pkl",
     "lhs_75": "lhs_75_ela.pkl", "lhs_100": "lhs_100_ela.pkl",
+    "lhs_random_cd_25": "lhs_random_cd_25_ela.pkl", "lhs_random_cd_50": "lhs_random_cd_50_ela.pkl",
+    "lhs_random_cd_75": "lhs_random_cd_75_ela.pkl", "lhs_random_cd_100": "lhs_random_cd_100_ela.pkl",
     "sobol_25": "sobol_25_ela.pkl", "sobol_50": "sobol_50_ela.pkl",
     "sobol_75": "sobol_75_ela.pkl", "sobol_100": "sobol_100_ela.pkl",
     "uniform_25": "uniform_25_ela.pkl", "uniform_50": "uniform_50_ela.pkl",
