@@ -12,7 +12,7 @@ STRATEGY_COLORS = {
     "uniform": "#d62728",
     "lhs": "#ff7f0e",
     "ilhs": "#1f77b4",
-    "lhs_rcd": "#8c564b",
+    "lhs_random_cd": "#8c564b",
     "sobol": "#2ca02c",
 }
 
@@ -21,11 +21,11 @@ STRATEGY_LABELS = {
     "uniform": "Uniform",
     "lhs": "LHS",
     "ilhs": "iLHS",
-    "lhs_rcd": "LHS-RCD",
+    "lhs_random_cd": "LHS-RCD",
     "sobol": "Sobol",
 }
 
-STRATEGY_ORDER = ["cma_random", "uniform", "lhs", "lhs_rcd", "ilhs", "sobol"]
+STRATEGY_ORDER = ["cma_random", "uniform", "lhs", "lhs_random_cd", "ilhs", "sobol"]
 
 SAMPLE_SIZES = [25, 50, 75, 100]
 

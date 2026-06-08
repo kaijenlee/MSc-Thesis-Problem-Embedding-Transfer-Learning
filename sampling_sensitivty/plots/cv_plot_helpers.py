@@ -25,17 +25,20 @@ N_FUNCTIONS = 24
 N_INSTANCES = 100
 DIMENSION = 2
 
-SAMPLING_STRATEGIES = ["ilhs", "lhs", "sobol", "uniform", "cma_random"]
+SAMPLING_STRATEGIES = ["ilhs", "lhs", "sobol", "uniform", "cma_random", "lhs_random_cd"]
 SAMPLE_SIZES_ELA = [25, 50, 75, 100]
 SAMPLE_SIZES_TLA = [10, 25, 50, 75, 100]
 
 STRATEGY_COLORS = {
     "ilhs": "#1f77b4", "lhs": "#ff7f0e", "sobol": "#2ca02c",
     "uniform": "#d62728", "cma_random": "#9467bd",
+    "lhs_random_cd": "#8c564b",
 }
+
 STRATEGY_LABELS = {
     "ilhs": "iLHS", "lhs": "LHS", "sobol": "Sobol",
     "uniform": "Uniform", "cma_random": "CMA-Random",
+    "lhs_random_cd": "LHS-Random-CD",
 }
 
 FUNCTION_GROUPS = {

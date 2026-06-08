@@ -25,14 +25,19 @@ from pathlib import Path
 N_FUNCTIONS = 24
 N_INSTANCES = 100
 N_RUNS = 30
-DIMENSION = 5
 
-OMIT_FEATURES = {
-    "disp.diff_median_02", "disp.ratio_median_02",
-    "ela_level.lda_qda_50", "ela_level.lda_qda_25",
-    "ic.eps_ratio", "disp.ratio_mean_02", "disp.diff_mean_02",
-    "ela_level.lda_qda_10", "ela_meta.quad_simple.cond",
-}
+
+def get_omit_features(dimension):
+    if dimension == 2:
+        return {
+            'disp.diff_median_02', 'disp.ratio_median_02',
+            'disp.ratio_mean_02', 'ela_meta.quad_simple.cond',
+            'disp.diff_mean_02', 'ic.eps_ratio'
+        }
+    elif dimension in (5, 10):
+        return {'ela_meta.quad_simple.cond'}
+    return set()
+
 OMIT_GROUPS = {"levelset"}
 
 ELA_FILES = {
@@ -48,6 +53,8 @@ ELA_FILES = {
     "lhs_50": "lhs_50_ela.pkl",
     "lhs_75": "lhs_75_ela.pkl",
     "lhs_100": "lhs_100_ela.pkl",
+    "lhs_random_cd_25": "lhs_random_cd_25_ela.pkl", "lhs_random_cd_50": "lhs_random_cd_50_ela.pkl",
+    "lhs_random_cd_75": "lhs_random_cd_75_ela.pkl", "lhs_random_cd_100": "lhs_random_cd_100_ela.pkl",
     "sobol_25": "sobol_25_ela.pkl",
     "sobol_50": "sobol_50_ela.pkl",
     "sobol_75": "sobol_75_ela.pkl",
@@ -92,6 +99,12 @@ ELA_FEATURE_GROUPS = {
         "ic.h_max", "ic.eps_s", "ic.eps_max", "ic.eps_ratio",
         "ic.m0", "ic.costs_runtime",
     ],
+    "pca": [
+        "pca.expl_var.cov_x", "pca.expl_var.cor_x", "pca.expl_var.cov_init",
+        "pca.expl_var.cor_init", "pca.expl_var_PC1.cov_x",
+        "pca.expl_var_PC1.cor_x", "pca.expl_var_PC1.cov_init",
+        "pca.expl_var_PC1.cor_init", "pca.costs_runtime",
+    ]
 }
 
 
@@ -117,7 +130,7 @@ def compute_cv(values):
 # Main
 # ---------------------------------------------------------------------------
 
-def main(input_dir, output_dir=None):
+def main(input_dir, output_dir=None, dimension=5):
     if output_dir is None:
         output_dir = input_dir
     os.makedirs(output_dir, exist_ok=True)
@@ -141,9 +154,10 @@ def main(input_dir, output_dir=None):
             data = pickle.load(f)
 
         config_cv = {}
+        omit_features = get_omit_features(dimension)
 
         for func_id in range(1, N_FUNCTIONS + 1):
-            func_key = (func_id, DIMENSION)
+            func_key = (func_id, dimension)
 
             func_cv = {}
 
@@ -154,13 +168,13 @@ def main(input_dir, output_dir=None):
                 group_cv = {}
 
                 for feat_name in feature_names:
-                    if feat_name in OMIT_FEATURES:
+                    if feat_name in omit_features:
                         continue
 
                     # Pool all 100 instances × 30 runs for this feature
                     values = []
                     for inst_id in range(1, N_INSTANCES + 1):
-                        instance_key = (func_id, inst_id, DIMENSION)
+                        instance_key = (func_id, inst_id, dimension)
 
                         if instance_key not in data:
                             continue
@@ -241,5 +255,7 @@ if __name__ == "__main__":
         default=None,
         help="Directory for output pkl file. Defaults to input_dir.",
     )
+    parser.add_argument("--dimension", type=int, default=5,
+                        help="Problem dimensionality (default: 5).")
     args = parser.parse_args()
-    main(input_dir=args.input_dir, output_dir=args.output_dir)
+    main(input_dir=args.input_dir, output_dir=args.output_dir, dimension=args.dimension)
