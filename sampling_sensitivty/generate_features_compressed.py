@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 from pathlib import Path
 from ripser import Rips
@@ -55,6 +56,7 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
     Extract ELA (Exploratory Landscape Analysis) features.
     """
     features = {}
+    levelset_failures = []
     # for function in tqdm(range(1, 25), position=0):
     for function in range(1, 25):
         # for instance in tqdm(range(1, 101), position=1, desc=f"ELA Sampling {sampling_method}, {sample_size} - Function {function}, dimension {dimension}"):
@@ -68,6 +70,17 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
                     with open(filename, 'rb') as f:
                         file_done = pickle.load(f)
                         features[(function, instance, dimension)] = file_done
+                        for runs, levelset_result in enumerate(file_done.get("levelset", [])):
+                            if not levelset_result:
+                                levelset_failures.append({
+                                    "sampling_method": sampling_method,
+                                    "sample_size": sample_size,
+                                    "function": function,
+                                    "instance": instance,
+                                    "dimension": dimension,
+                                    "run": runs,
+                                    "error": "cached (error not retained)",
+                                })
                         continue
                 except EOFError:
                     print(f"{filename} is empty or corrupted")
@@ -76,6 +89,7 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
             #     f"Processing ELA - Sampling {sampling_method}, {sample_size} - Function {function} - Instance {instance} - Dimension {dimension}...")
             features[(function, instance, dimension)] = {
                 "ela_dist": [],
+                "levelset": [],
                 "meta": [],
                 "disp": [],
                 "ic": [],
@@ -88,6 +102,21 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
                 Y = samples['Y'][:sample_size * dimension]
 
                 features[(function, instance, dimension)]["ela_dist"].append(calculate_ela_distribution(X, Y))
+                try:
+                    levelset_features = calculate_ela_level(X, Y)
+                    features[(function, instance, dimension)]["levelset"].append(levelset_features)
+                except Exception as e:
+                    print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
+                    features[(function, instance, dimension)]["levelset"].append({})
+                    levelset_failures.append({
+                        "sampling_method": sampling_method,
+                        "sample_size": sample_size,
+                        "function": function,
+                        "instance": instance,
+                        "dimension": dimension,
+                        "run": runs,
+                        "error": str(e),
+                    })
                 features[(function, instance, dimension)]["meta"].append(calculate_ela_meta(X, Y))
                 features[(function, instance, dimension)]["disp"].append(calculate_dispersion(X, Y))
                 features[(function, instance, dimension)]["ic"].append(
@@ -100,6 +129,20 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
 
     with open(output_dir / f"{sampling_method}_{sample_size}_ela.pkl", 'wb') as f:
         pickle.dump(features, f)
+
+    if levelset_failures:
+        report_file = output_dir / f"{sampling_method}_{sample_size}_ela_levelset_failures.csv"
+        with open(report_file, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "sampling_method", "sample_size", "function", "instance", "dimension", "run", "error"
+            ])
+            writer.writeheader()
+            writer.writerows(levelset_failures)
+        print(
+            f"Levelset ELA failed on {len(levelset_failures)} run(s) "
+            f"out of {24 * 100 * 30} for {sampling_method}_{sample_size} (dimension {dimension}). "
+            f"Details written to {report_file}"
+        )
 
 
 def extract_tla_features(samples_src, sampling_method, sample_size, data_dir, output_dir, dimension):

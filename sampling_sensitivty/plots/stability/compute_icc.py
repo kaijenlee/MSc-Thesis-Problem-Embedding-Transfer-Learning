@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 
 # Strategies omitted by default (override via omit_strategies=... or --omit).
-DEFAULT_OMIT_STRATEGIES = {"lhs_random_cd"}
+DEFAULT_OMIT_STRATEGIES = {}
 
 
 # Known multi-word strategy prefixes so the trailing integer is split off
