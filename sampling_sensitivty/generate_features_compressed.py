@@ -106,7 +106,7 @@ def extract_ela_features(samples_src, sampling_method, sample_size, data_dir, ou
                     levelset_features = calculate_ela_level(X, Y)
                     features[(function, instance, dimension)]["levelset"].append(levelset_features)
                 except Exception as e:
-                    print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
+                    # print(f"Error in levelset for {sampling_method}-{sample_size}: {function}-{instance}-{dimension}: {e}")
                     features[(function, instance, dimension)]["levelset"].append({})
                     levelset_failures.append({
                         "sampling_method": sampling_method,
